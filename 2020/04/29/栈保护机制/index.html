@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="hollk">
+
+
+    <meta name="subtitle" content="ret2text">
+
+
+    <meta name="description" content="说人话，讲清楚，负责到底">
+
+
+    <meta name="keywords" content="ret2text,二进制,pwn,ctf-wiki">
+
+
+<title>栈保护机制 | Hollk&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Hollk&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Hollk&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">栈保护机制</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">hollk</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">April 29, 2020&nbsp;&nbsp;16:46:12</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/%E7%90%86%E8%AE%BA%E6%96%87%E7%AB%A0/">理论文章</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>##一、CANNARY（栈溢出保护）</p>
+<p>​    栈溢出保护是一种用缓冲区溢出攻击环节手段，当函数存在缓冲区溢出漏洞时，攻击者可以覆盖栈上的返回地址来让shellcode能够得到执行。当启用栈保护后，函数开始执行的时候就会向往栈里插入cookie信息，当函数真正返回的时候回验证cookie信息是否合法，若果不合法就会停止程序运行。攻击者在覆盖返回地址的时候往往也会将cookie信息给覆盖掉，导致栈保护检查失败，而阻止shellcode的执行，在Linux中将cookie信息称为canary。</p>
+<p>当开启栈溢出时不可以覆盖最后的canary内容，但是可以对canary前面进行溢出</p>
+<p>GCC用法：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">gcc -o test test.c // 默认情况下，不开启Canary保护</span><br><span class="line">gcc -fno-stack-protector -o test test.c //禁用栈保护</span><br><span class="line">gcc -fstack-protector -o test test.c //启用堆栈保护，不过只为局部变量中含有 char 数组的函数插入保护代码</span><br><span class="line">gcc -fstack-protector-all -o test test.c //启用堆栈保护，为所有函数插入保护代码</span><br><span class="line">-fno-stack-protector /-fstack-protector / -fstack-protector-all (关闭 / 开启 / 全开启)</span><br></pre></td></tr></table></figure>
+
+<h2 id="二、FORTIFY"><a href="#二、FORTIFY" class="headerlink" title="二、FORTIFY"></a>二、FORTIFY</h2><p>​    fortify是轻微的检查，用于检查是否存在缓冲区溢出的错误。适用于程序采用大量的字符串或者内存操作函数，如:</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line">&gt;&gt;&gt; <span class="built_in">memcpy</span>():</span><br><span class="line">	描述：<span class="function"><span class="keyword">void</span> *<span class="title">memcpy</span><span class="params">(<span class="keyword">void</span> *str1, <span class="keyword">const</span> <span class="keyword">void</span> *str2, <span class="keyword">size_t</span> n)</span></span></span><br><span class="line">    	 从存储区str2复制n个字符到存储区str1</span><br><span class="line">  参数：str1 -- 指向用于存储复制内容的目标数组，类型强制转换为 <span class="keyword">void</span>* 指针</span><br><span class="line">    	 str2 -- 指向要复制的数据源，类型强制转换为 <span class="keyword">void</span>* 指针</span><br><span class="line">    	 n -- 要被复制的字节数</span><br><span class="line">  返回值：该函数返回一个指向目标存储区 str1 的指针</span><br><span class="line">---------------------------------------------------------------------------------------</span><br><span class="line">&gt;&gt;&gt; <span class="built_in">memset</span>():</span><br><span class="line">  描述：<span class="function"><span class="keyword">void</span> *<span class="title">memset</span><span class="params">(<span class="keyword">void</span> *str, <span class="keyword">int</span> c, <span class="keyword">size_t</span> n)</span></span></span><br><span class="line">    	 复制字符 c（一个无符号字符）到参数 str 所指向的字符串的前 n 个字符</span><br><span class="line">  参数：str -- 指向要填充的内存块</span><br><span class="line">    	 c -- 要被设置的值。该值以 <span class="keyword">int</span> 形式传递，但是函数在填充内存块时是使用该值的无符号字符形式</span><br><span class="line">    	 n -- 要被设置为该值的字节数</span><br><span class="line">  返回值：该值返回一个指向存储区 str 的指针</span><br><span class="line">---------------------------------------------------------------------------------------</span><br><span class="line">&gt;&gt;&gt; <span class="built_in">strcpy</span>():</span><br><span class="line">  描述：<span class="function"><span class="keyword">char</span> *<span class="title">strcpy</span><span class="params">(<span class="keyword">char</span> *dest, <span class="keyword">const</span> <span class="keyword">char</span> *src)</span></span></span><br><span class="line">    	 把 src 所指向的字符串复制到 dest，容易出现溢出</span><br><span class="line">  参数：dest -- 指向用于存储复制内容的目标数组</span><br><span class="line">    	 src -- 要复制的字符串</span><br><span class="line">  返回值：该函数返回一个指向最终的目标字符串 dest 的指针</span><br><span class="line">--------------------------------------------------------------------------------------&gt;&gt;&gt; stpcpy():</span><br><span class="line">  描述：<span class="function"><span class="keyword">extern</span> <span class="keyword">char</span> *<span class="title">stpcpy</span><span class="params">(<span class="keyword">char</span> *dest,<span class="keyword">char</span> *src)</span></span></span><br><span class="line">    	 把src所指由NULL借宿的字符串复制到dest所指的数组中</span><br><span class="line">  说明：src和dest所指内存区域不可以重叠且dest必须有足够的空间来容纳src的字符串返回指向dest结尾处字符（<span class="literal">NULL</span>）的指针	 </span><br><span class="line">  返回值：</span><br><span class="line">---------------------------------------------------------------------------------------    &gt;&gt;&gt; <span class="built_in">strncpy</span>():</span><br><span class="line">  描述：<span class="function"><span class="keyword">char</span> *<span class="title">strncpy</span><span class="params">(<span class="keyword">char</span> *dest, <span class="keyword">const</span> <span class="keyword">char</span> *src, <span class="keyword">size_t</span> n)</span></span></span><br><span class="line">    	 把 src 所指向的字符串复制到 dest，最多复制 n 个字符。当 src 的长度小于 n 时，dest 的剩余部分将用空字节填充</span><br><span class="line">  参数：dest -- 指向用于存储复制内容的目标数组</span><br><span class="line">    	 src -- 要复制的字符串</span><br><span class="line">    	 n -- 要从源中复制的字符数</span><br><span class="line">  返回值：该函数返回最终复制的字符串</span><br><span class="line">---------------------------------------------------------------------------------------&gt;&gt;&gt; <span class="built_in">strcat</span>():</span><br><span class="line">  描述：<span class="function"><span class="keyword">char</span> *<span class="title">strcat</span><span class="params">(<span class="keyword">char</span> *dest, <span class="keyword">const</span> <span class="keyword">char</span> *src)</span></span></span><br><span class="line">    	 把 src 所指向的字符串追加到 dest 所指向的字符串的结尾</span><br><span class="line">  参数：dest -- 指向目标数组，该数组包含了一个 C 字符串，且足够容纳追加后的字符串</span><br><span class="line">    	 src -- 指向要追加的字符串，该字符串不会覆盖目标字符串</span><br><span class="line">  返回值：</span><br><span class="line">---------------------------------------------------------------------------------------&gt;&gt;&gt; <span class="built_in">strncat</span>():</span><br><span class="line">  描述：<span class="function"><span class="keyword">char</span> *<span class="title">strncat</span><span class="params">(<span class="keyword">char</span> *dest, <span class="keyword">const</span> <span class="keyword">char</span> *src, <span class="keyword">size_t</span> n)</span></span></span><br><span class="line">    	 把 src 所指向的字符串追加到 dest 所指向的字符串的结尾，直到 n 字符长度为止</span><br><span class="line">  参数：dest -- 指向目标数组，该数组包含了一个 C 字符串，且足够容纳追加后的字符串，包括额外的空字符</span><br><span class="line">    	 src -- 要追加的字符串</span><br><span class="line">    	 n -- 要追加的最大字符数</span><br><span class="line">  返回值：该函数返回一个指向最终的目标字符串 dest 的指针</span><br><span class="line">---------------------------------------------------------------------------------------&gt;&gt;&gt; <span class="built_in">sprintf</span>():PHP</span><br><span class="line">  描述：<span class="built_in">sprintf</span>(format,arg1,arg2,arg++)</span><br><span class="line">    	 arg1、arg2、++ 参数将被插入到主字符串中的百分号（%）符号处。该函数是逐步执行的。在第一个 % 符号处，插入 arg1，在第二个 % 符号处，插入 arg2，依此类推</span><br><span class="line">  参数：format -- 必需。规定字符串以及如何格式化其中的变量</span><br><span class="line">    	 arg1 -- 必需。规定插到 format 字符串中第一个 % 符号处的参</span><br><span class="line">    	 arg2 -- 可选。规定插到 format 字符串中第二个 % 符号处的参数</span><br><span class="line">    	 arg++ -- 可选。规定插到 format 字符串中第三、四等等 % 符号处的参数</span><br><span class="line">  返回值：返回已格式化的字符串</span><br><span class="line">---------------------------------------------------------------------------------------&gt;&gt;&gt; <span class="built_in">snprintf</span>():</span><br><span class="line">  描述：<span class="function"><span class="keyword">int</span> <span class="title">snprintf</span> <span class="params">( <span class="keyword">char</span> * str, <span class="keyword">size_t</span> <span class="built_in">size</span>, <span class="keyword">const</span> <span class="keyword">char</span> * format, ... )</span></span></span><br><span class="line">    	 设将可变参数(...)按照 format 格式化成字符串，并将字符串复制到 str 中，size 为要写入的字符的最大数目，超过 size 会被截断</span><br><span class="line">  参数：str -- 目标字符串</span><br><span class="line">    	 <span class="built_in">size</span> -- 拷贝字节数(Bytes)如果格式化后的字符串长度大于 <span class="built_in">size</span></span><br><span class="line">    	 format -- 格式化成字符串</span><br><span class="line">  返回值：如果格式化后的字符串长度小于等于 <span class="built_in">size</span>，则会把字符串全部复制到 str 中，并给其后添加一个字符串结束符 \<span class="number">0</span>。 如果格式化后的字符串长度大于 <span class="built_in">size</span>，超过 <span class="built_in">size</span> 的部分会被截断，只将其中的 (<span class="built_in">size</span><span class="number">-1</span>) 个字符复制到 str 中，并给其后添加一个字符串结束符 \<span class="number">0</span>，返回值为欲写入的字符串长度</span><br><span class="line">---------------------------------------------------------------------------------------&gt;&gt;&gt; <span class="built_in">vsprintf</span>():PHP</span><br><span class="line">  描述：<span class="built_in">vsprintf</span>(format,argarray) </span><br><span class="line">    	 与 <span class="built_in">sprintf</span>() 不同，<span class="built_in">vsprintf</span>() 中的参数位于数组中。数组元素将被插入到主字符串中的百分号（%）符号处。该函数是逐步执行的</span><br><span class="line">  参数：format -- 必需。规定字符串以及如何格式化其中的变量</span><br><span class="line">    	 argarray -- 必需。带有参数的一个数组，这些参数会被插到 format 字符串中的 % 符号处</span><br><span class="line">  返回值：以格式化字符串的形式返回数组值</span><br><span class="line">---------------------------------------------------------------------------------------&gt;&gt;&gt; vsnprintf():</span><br><span class="line">  描述：<span class="function"><span class="keyword">int</span> <span class="title">vsnprintf</span> <span class="params">(<span class="keyword">char</span> * s, <span class="keyword">size_t</span> n, <span class="keyword">const</span> <span class="keyword">char</span> * format, va_list arg )</span></span></span><br><span class="line">    	 将格式化数据从可变参数列表写入大小缓冲区</span><br><span class="line">如果在<span class="built_in">printf</span>上使用格式，则使用相同的文本组成字符串，但使用由arg标识的变量参数列表中的元素而不是附加的函数参数，并将结果内容作为C字符串存储在s指向的缓冲区中 （以n为最大缓冲区容量来填充）。如果结果字符串的长度超过了n<span class="number">-1</span>个字符，则剩余的字符将被丢弃并且不被存储，而是被计算为函数返回的值。在内部，函数从arg标识的列表中检索参数，就好像va_arg被使用了一样，因此arg的状态很可能被调用所改变。在任何情况下，arg都应该在调用之前的某个时刻由va_start初始化，并且在调用之后的某个时刻，预计会由va_end释放</span><br><span class="line">  参数：s -- 指向存储结果C字符串的缓冲区的指针，缓冲区应至少有n个字符的大小</span><br><span class="line">    	 n -- 在缓冲区中使用的最大字节数，生成的字符串的长度至多为n<span class="number">-1</span>，为额外的终止空字符留下空，<span class="keyword">size_t</span>是一个无符号整数类型</span><br><span class="line">    	 format -- 包含格式字符串的C字符串，其格式字符串与<span class="built_in">printf</span>中的格式相同</span><br><span class="line">     	 arg -- 标识使用va_start初始化的变量参数列表的值</span><br><span class="line">  返回值：如果n足够大，则会写入的字符数，不包括终止空字符。如果发生编码错误，则返回负数。注意，只有当这个返回值是非负值且小于n时，字符串才被完全写入</span><br><span class="line">---------------------------------------------------------------------------------------&gt;&gt;&gt; gets():</span><br><span class="line">  描述：<span class="function"><span class="keyword">char</span> *<span class="title">gets</span><span class="params">(<span class="keyword">char</span> *str)</span></span></span><br><span class="line">    	 从标准输入 stdin 读取一行，并把它存储在 str 所指向的字符串中。当读取到换行符时，或者到达文件末尾时，它会停止，具体视情况而定</span><br><span class="line">  参数：str -- 这是指向一个字符数组的指针，该数组存储了 C 字符串</span><br><span class="line">  返回值：如果成功，该函数返回 str。如果发生错误或者到达文件末尾时还未读取任何字符，则返回 <span class="literal">NULL</span></span><br></pre></td></tr></table></figure>
+
+<p>GCC用法：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -D_FORTIFY_SOURCE=1  仅仅只在编译时进行检查（尤其是#include &lt;string.h&gt;这种文件头）</span><br><span class="line">gcc -D_FORTIFY_SOURCE=2  程序执行时也会进行检查（如果检查到缓冲区溢出，就会终止程序）</span><br></pre></td></tr></table></figure>
+
+<p>在-D_FORTIFY_SOURCE=2时，通过对数组大小来判断替换strcpy、memcpy、memset等函数名，从而达到防止缓冲区溢出的作用</p>
+<p>##三、NX（DEP）</p>
+<p>​    NX即No-eXecute（不可执行）的意思，NX（DEP）的基本原理是将数据所在内存表示为不可执行，当程序溢出成功转入shellcode时，程序会尝试在数据页面上执行命令，此时CPU就会抛出异常，而不去执行恶意代码，主要防止在数据区溢出</p>
+<p>​    正常在栈溢出时通过跳转指令跳转至shellcode，但是NX开启后CPU会对数据区域进行检查，当发现正常程序不执行，并跳转至其他地址后会抛出异常，接下来不会继续执行shellcode，而是去转入异常处理，处理后会禁止shellcode继续执行</p>
+<p>GCC 用法：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">gcc -o test test.c // 默认情况下，开启NX保护</span><br><span class="line">gcc -z execstack -o test test.c // 禁用NX保护</span><br><span class="line">gcc -z noexecstack -o test test.c // 开启NX保护</span><br><span class="line">-z execstack / -z noexecstack (关闭 / 开启)</span><br></pre></td></tr></table></figure>
+
+<p>##四、PIE（ASLR）</p>
+<p>​    一般情况下NX（Windows平台上称为DEP）和地址空间分布随机化（ASLR）会同时工作。内存地址随机化机制有三种情况</p>
+<figure class="highlight basic"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="symbol">0 </span>- 表示关闭进程地址随机化</span><br><span class="line"><span class="symbol">1 </span>- 表示将mmap的基地址，栈基地址和.so地址随机化</span><br><span class="line"><span class="symbol">2 </span>- 表示在<span class="number">1</span>的基础上增加heap的地址随机化</span><br></pre></td></tr></table></figure>
+
+<p>可以防止Ret2libc方式针对DEP的攻击。ASLR和DEP配合使用，能有效阻止攻击者在堆栈上运行恶意代码</p>
+<p>Linux下关闭PIE的命令：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo -s echo 0 &gt; /proc/sys/kernel/randomize_va_space</span><br></pre></td></tr></table></figure>
+
+<p>GCC用法：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">gcc -o test test.c // 默认情况下，不开启PIE</span><br><span class="line">gcc -fpie -pie -o test test.c // 开启PIE，此时强度为1</span><br><span class="line">gcc -fPIE -pie -o test test.c // 开启PIE，此时为最高强度2</span><br><span class="line">gcc -fpic -o test test.c // 开启PIC，此时强度为1，不会开启PIE</span><br><span class="line">gcc -fPIC -o test test.c // 开启PIC，此时为最高强度2，不会开启PIE</span><br><span class="line">-no-pie / -pie (关闭 / 开启)</span><br></pre></td></tr></table></figure>
+
+<p>gcc中的-fPIC选项是针对某些特殊机型做了特殊处理，比如适合动态链接并能避免超出GOT大小限制之类的错误</p>
+<h2 id="五、RELRO"><a href="#五、RELRO" class="headerlink" title="五、RELRO"></a>五、RELRO</h2><p>​    在Linux系统安全领域数据可以写的存储区就会是攻击的目标，尤其是存储函数指针的区域。所以在安全防护的角度应尽量减少可写的存储区域</p>
+<p>RELRO会设置符号重定向表格为只读或者程序启动时就解析并绑定所有动态符号，从而减少对GOT表的攻击。如果RELRO为Partial RELRO，就说明对GOT表具有写权限</p>
+<p>GCC用法：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">gcc -o test test.c // 默认情况下，是Partial RELRO</span><br><span class="line">gcc -z norelro -o test test.c // 关闭，即No RELRO</span><br><span class="line">gcc -z lazy -o test test.c // 部分开启，即Partial RELRO</span><br><span class="line">gcc -z now -o test test.c // 全部开启</span><br><span class="line">-z norelro / -z lazy / -z now (关闭 / 部分开启 / 完全开启)</span><br></pre></td></tr></table></figure>
+
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>hollk</span>
+                    </p>
+                
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a href="http://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>一起努力，位列仙班</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/%E4%BF%9D%E6%8A%A4%E6%9C%BA%E5%88%B6/"># 保护机制</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+            
+            <a class="next" rel="next" href="/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2reg/">好好说话之ret2reg</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© hollk | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+</html>
