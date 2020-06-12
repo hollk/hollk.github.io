@@ -1,43 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>http://yoursite.com/2020/05/03/%E7%AB%AF%E5%8F%A3%E5%8F%8A%E6%BC%8F%E6%B4%9E/</loc>
-    <lastmod>2020-05-03</lastmod>
+    <loc>http://yoursite.com/refer/%E7%AB%AF%E5%8F%A3%E5%8F%8A%E6%BC%8F%E6%B4%9E.html</loc>
+    <lastmod>2020-05-06</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/05/03/%E5%A4%87%E6%88%98HW%EF%BC%8C%E4%BA%8C%E8%BF%9B%E5%88%B6%E5%85%88%E6%94%BE%E4%B8%80%E6%94%BE/</loc>
-    <lastmod>2020-05-03</lastmod>
-  </url>  <url>
-    <loc>http://yoursite.com/2020/04/28/%E6%A0%88%E4%BF%9D%E6%8A%A4%E6%9C%BA%E5%88%B6/</loc>
+    <loc>http://yoursite.com/refer/%E6%A0%88%E4%BF%9D%E6%8A%A4%E6%9C%BA%E5%88%B6.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/28/pwntools%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95/</loc>
+    <loc>http://yoursite.com/refer/pwntools%E5%B8%B8%E7%94%A8%E8%AF%AD%E6%B3%95.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2text/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2text.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2syscall/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2syscall.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc3/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc3.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc2/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc2.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc1/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2libc1.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2csu/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2csu.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2shellcode/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2shellcode.html</loc>
     <lastmod>2020-04-29</lastmod>
   </url>  <url>
-    <loc>http://yoursite.com/2020/04/29/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2reg/</loc>
+    <loc>http://yoursite.com/refer/%E5%A5%BD%E5%A5%BD%E8%AF%B4%E8%AF%9D%E4%B9%8Bret2reg.html</loc>
     <lastmod>2020-04-29</lastmod>
-  </url>  <url>
-    <loc>http://yoursite.com/2020/04/04/hello-world/</loc>
-    <lastmod>2020-04-04</lastmod>
   </url>
 </urlset>

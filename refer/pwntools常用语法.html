@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="hollk">
+
+
+    <meta name="subtitle" content="ret2text">
+
+
+    <meta name="description" content="说人话，讲清楚，负责到底">
+
+
+    <meta name="keywords" content="ret2text,二进制,pwn,ctf-wiki">
+
+
+<title>pwntools常用语法 | Hollk&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.0"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Hollk&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Hollk&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">文章</a>
+                
+                    <a class="menu-item" href="/category">分类</a>
+                
+                    <a class="menu-item" href="/tag">标签</a>
+                
+                    <a class="menu-item" href="/about">关于我</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    <article class="post-wrap page">
+        
+        <h2 class="post-title">pwntools常用语法</h2>
+        
+        <section class="post-content">
+            <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br></pre></td></tr></table></figure>
+
+<p>这句话将一系列的函数引入全局命名空间，可以运用pwn库中的所有函数</p>
+<h3 id="1、模块"><a href="#1、模块" class="headerlink" title="1、模块"></a>1、模块</h3><ul>
+<li>asm：汇编与反汇编，支持x86/x64/arm/mips/powerpc</li>
+<li>dynelf：用于远成富豪泄露，需要提供leak方法</li>
+<li>elf：对elf文件进行操作</li>
+<li>gdb：配合gdb进行调试</li>
+<li>memleak：用于内存泄漏</li>
+<li>shellcraft：shellcode生成器</li>
+<li>tubes：包括tubes.sock，tubes.process，tubes.serialtube，分别适用于不同场景的PIPE</li>
+<li>untils：一些实用的小功能，例如CRC计算，cyclic pattern等</li>
+</ul>
+<h3 id="2、建立连接"><a href="#2、建立连接" class="headerlink" title="2、建立连接"></a>2、建立连接</h3><p>pwntools中的<strong>pwnlib.tubes</strong>模块可以与pwn题中的二进制程序进行交互</p>
+<p>这个模块对外暴露了一个标准的接口来与进程、套接字、串口或者其他输入设备进行交流。例如可以通过<strong>pwnlib.tubes.remote</strong>进行</p>
+<p>远程交互：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>conn = remote(<span class="string">'目标IP或URL'</span>,端口号)</span><br></pre></td></tr></table></figure>
+
+<p>本地交互：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>sh = process(<span class="string">'/bin/sh'</span>)               		<span class="comment">#调用本地shell</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>sh.sendline(<span class="string">'sleep 3; echo hello world'</span>)  <span class="comment">#睡眠三秒发送hello word\n</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>sh.recvline(timeout=<span class="number">1</span>)                		<span class="comment">#等待1秒后接收</span></span><br><span class="line"><span class="string">''</span>																						<span class="comment">#啥也没有</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>sh.recvline(timeout=<span class="number">5</span>)										<span class="comment">#等待5秒后接收</span></span><br><span class="line"><span class="string">'hello word\n'</span>																<span class="comment">#出现hello word\n</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>sh.close()																<span class="comment">#断开连接</span></span><br></pre></td></tr></table></figure>
+
+<p>监听端口：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>l = listen()													<span class="comment">#开启本地监听</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>r = remote(<span class="string">'localhost'</span>, l.lport)			<span class="comment">#链接本地监听端口</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>c = l.wait_for_connection()						<span class="comment">#等待链接</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>r.send(<span class="string">'hello'</span>)												<span class="comment">#发送hello</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>c.recv()															<span class="comment">#接收指定字节</span></span><br><span class="line"><span class="string">'hello'</span>																		<span class="comment">#出现hello</span></span><br></pre></td></tr></table></figure>
+
+<p>读写函数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">interactive() 											<span class="comment">#在获取shell之后使用，直接进行交互，相当于回到shell模式</span></span><br><span class="line">recv(numb=字节大小,timeout=default)	 <span class="comment">#接受指定字节数</span></span><br><span class="line">recvall() 													<span class="comment">#一直接收直到达到文件EOF</span></span><br><span class="line">recvline(delims, drop=<span class="literal">False</span>) 				<span class="comment">#一直读到delims的pattern出现为止</span></span><br><span class="line">recvrepeat(timeout=default) 				<span class="comment">#持续接受直到EOF或timeout</span></span><br><span class="line">send(data)													<span class="comment">#发送数据</span></span><br><span class="line">sendline(data)											<span class="comment">#发送一行数据，在数据末尾加\n</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3、汇编与反汇编"><a href="#3、汇编与反汇编" class="headerlink" title="3、汇编与反汇编"></a>3、汇编与反汇编</h3><p>使用asm来进行汇编</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>asm(<span class="string">'nop'</span>)</span><br><span class="line"><span class="string">'\x90'</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>asm(<span class="string">'nop'</span>, arch=<span class="string">'arm'</span>)</span><br><span class="line"><span class="string">'\x00\xf0 \xe3'</span></span><br></pre></td></tr></table></figure>
+
+<p>使用context来指定CPU类型及操作系统</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>context.arch			= <span class="string">'i386'</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>context.os				= <span class="string">'linux'</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>context.endian		= <span class="string">'little'</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>context.word_size = <span class="number">32</span></span><br></pre></td></tr></table></figure>
+
+<p>使用disasm进行反汇编</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> disasm(<span class="string">'6a0258cd80ebf9'</span>.decode(<span class="string">'hex'</span>))</span><br><span class="line">   <span class="number">0</span>:   <span class="number">6</span>a <span class="number">02</span>                   push   <span class="number">0x2</span></span><br><span class="line">   <span class="number">2</span>:   <span class="number">58</span>                      pop    eax</span><br><span class="line">   <span class="number">3</span>:   cd <span class="number">80</span>                   int    <span class="number">0x80</span></span><br><span class="line">   <span class="number">5</span>:   eb f9                   jmp    <span class="number">0x0</span></span><br></pre></td></tr></table></figure>
+
+<p>asm需要binutils中的as工具辅助，如果是不同于本机平台的其他平台的汇编，例如在x86机器上进行mips的汇编就会出现as工具未找到的情况，这时候需要安装其他平台的cross-binutils。</p>
+<h3 id="4、Shellcode生成器"><a href="#4、Shellcode生成器" class="headerlink" title="4、Shellcode生成器"></a>4、Shellcode生成器</h3><p>使用shellcaft可以生成对应的框架的Shellcode代码，使用链式调用的方法就可以</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> shellcraft.i386.nop().strip(<span class="string">'\n'</span>)</span><br><span class="line">		nop</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> shellcraft.i386.linux.sh()</span><br><span class="line">		 /* execve(path=<span class="string">'/bin///sh'</span>, argv=[<span class="string">'sh'</span>], envp=<span class="number">0</span>) */</span><br><span class="line">    /* push <span class="string">'/bin///sh\x00'</span> */</span><br><span class="line">    push <span class="number">0x68</span></span><br><span class="line">    push <span class="number">0x732f2f2f</span></span><br><span class="line">    push <span class="number">0x6e69622f</span></span><br><span class="line">    mov ebx, esp</span><br><span class="line">    /* push argument array [<span class="string">'sh\x00'</span>] */</span><br><span class="line">    /* push <span class="string">'sh\x00\x00'</span> */</span><br><span class="line">    push <span class="number">0x1010101</span></span><br><span class="line">    xor dword ptr [esp], <span class="number">0x1016972</span></span><br><span class="line">    xor ecx, ecx</span><br><span class="line">    push ecx /* null terminate */</span><br><span class="line">    push <span class="number">4</span></span><br><span class="line">    pop ecx</span><br><span class="line">    add ecx, esp</span><br><span class="line">    push ecx /* <span class="string">'sh\x00'</span> */</span><br><span class="line">    mov ecx, esp</span><br><span class="line">    xor edx, edx</span><br><span class="line">    /* call execve() */</span><br><span class="line">    push SYS_execve /* <span class="number">0xb</span> */</span><br><span class="line">    pop eax</span><br><span class="line">    int <span class="number">0x80</span></span><br></pre></td></tr></table></figure>
+
+<p>如果需要在64位的Linux上执行/bin/sh就可以使用shellcraft.amd64.linux.sh()，配合asm函数就可以得到payload</p>
+<h3 id="5、ELF文件操作"><a href="#5、ELF文件操作" class="headerlink" title="5、ELF文件操作"></a>5、ELF文件操作</h3><p>在进行elf文件逆向时，需要对各个符号地址进行分析，elf模块提供了一种边界的方法能够找到文件内函数的地址，plt位置以及got表的位置</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>e = ELF(<span class="string">'/bin/cat'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.address)     				<span class="comment">#文件装载的基地址</span></span><br><span class="line"><span class="number">0x400000</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.symbols[<span class="string">'write'</span>])		<span class="comment">#函数地址</span></span><br><span class="line"><span class="number">0x401680</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.got[<span class="string">'write'</span>])				<span class="comment">#GOTb表地址</span></span><br><span class="line"><span class="number">0x60b070</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span><span class="keyword">print</span> hex(e.plt[<span class="string">'write'</span>])				<span class="comment">#PLT表地址</span></span><br><span class="line"><span class="number">0x401680</span></span><br></pre></td></tr></table></figure>
+
+<p>同样可以打开一个libc.so进行解析其中的system的位置</p>
+<p>还可以修改一个ELF</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&gt;&gt;&gt; </span>e = ELF(<span class="string">'/bin/cat'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>e.read(e.address+<span class="number">1</span>, <span class="number">3</span>)</span><br><span class="line"><span class="string">'ELF'</span></span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>e.asm(e.address, <span class="string">'ret'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>e.save(<span class="string">'/tmp/quiet-cat'</span>)</span><br><span class="line"><span class="meta">&gt;&gt;&gt; </span>disasm(file(<span class="string">'/tmp/quiet-cat'</span>,<span class="string">'rb'</span>).read(<span class="number">1</span>))</span><br><span class="line"><span class="string">'   0:   c3                      ret'</span></span><br></pre></td></tr></table></figure>
+
+<p>ELF模块可用函数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">asm(address, assembly) 		<span class="comment">#在指定地址进行汇编</span></span><br><span class="line">bss(offset)    				 		<span class="comment">#返回bss段的位置，offset是偏移量</span></span><br><span class="line">checksec()             		<span class="comment">#对elf进行一些安全保护检查</span></span><br><span class="line">disasm(address,n_bytes)		<span class="comment">#在指定位置进行n_bytes个字节的反汇编</span></span><br><span class="line">offset_to_vaddr(offset)		<span class="comment">#将文件中的偏移offset转换成虚拟地址VMA</span></span><br><span class="line">vaddr_to_offset(address)  <span class="comment">#和上面作用相反</span></span><br><span class="line">read(address, count)      <span class="comment">#在address(VMA)位置读取count个字节</span></span><br><span class="line">write(address, data) 			<span class="comment">#在address(VMA)位置写入count个字节</span></span><br><span class="line">section(name)							<span class="comment">#dump处指定section的数据</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="6、ROP模块"><a href="#6、ROP模块" class="headerlink" title="6、ROP模块"></a>6、ROP模块</h3><p>ROP模块的作用就是自动寻找程序中的gadget，自动在栈上部署对应的参数</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">elf = ELF(<span class="string">'ropassurusrex'</span>)</span><br><span class="line">rop = ROP(elf)</span><br><span class="line">rop.read(<span class="number">0</span>, elf.bss(<span class="number">0x80</span>))</span><br><span class="line">rop.dump()</span><br><span class="line"><span class="comment"># ['0x0000:        0x80482fc (read)',</span></span><br><span class="line"><span class="comment">#  '0x0004:       0xdeadbeef',</span></span><br><span class="line"><span class="comment">#  '0x0008:              0x0',</span></span><br><span class="line"><span class="comment">#  '0x000c:        0x80496a8']</span></span><br><span class="line">str(rop)</span><br><span class="line"><span class="comment"># '\xfc\x82\x04\x08\xef\xbe\xad\xde\x00\x00\x00\x00\xa8\x96\x04\x08'</span></span><br></pre></td></tr></table></figure>
+
+<p>使用ROP(elf)来产生一个rop对象，这时rop链还是空的，需要在其中添加函数</p>
+<p>因为ROP对象实现了_getattr_的功能，可以直接通过func call的形式来添加函数，rop.read(0, elf.bss(0x80))实际相当于rop.call(‘read’, (0,elf.bss(0x80)))。通过多次添加函数调用，最后使用str将整个rop chain dump（链式存储）</p>
+<p>可以使用的函数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">call(resolvable, argument=()) <span class="comment">#添加一个调用，resolvabele可以是一个符号，也可以是一个int型地址，注意后面的参数必须是元组否则就会报错，即使只有一个参数也要写成元组的形式(在后面加上一个逗号)</span></span><br><span class="line">chain()												<span class="comment">#返回当前的字节顺序，就是payload</span></span><br><span class="line">dump()												<span class="comment">#直观展示出当前的rop chain</span></span><br><span class="line">raw()													<span class="comment">#在rop chain中加上一个整数或字符串</span></span><br><span class="line">search(move=<span class="number">0</span>, regs=<span class="literal">None</span>, order=<span class="string">'size'</span>)<span class="comment">#按特定条件搜索gadget</span></span><br><span class="line">unresolve(value)							<span class="comment">#给出一个地址，反解析出符号</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="7、其他函数"><a href="#7、其他函数" class="headerlink" title="7、其他函数"></a>7、其他函数</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">p64 <span class="comment">#将整数转换为8位16进制</span></span><br><span class="line">u64 <span class="comment">#将8位16进制转换为整数</span></span><br><span class="line">p32 <span class="comment">#将整数转换为4位16进制</span></span><br><span class="line">u32 <span class="comment">#将4位16进制转换为整数</span></span><br><span class="line">gdb.attach(sh)调用GDB</span><br></pre></td></tr></table></figure>
+        </section>
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+        <span id="busuanzi_container_site_pv">本站总访问量<span id="busuanzi_value_site_pv"></span>次</span>
+        <span class="post-meta-divider">|</span>
+        <span id="busuanzi_container_site_uv">本站访客数<span id="busuanzi_value_site_uv"></span>人</span>
+	<br>
+	<span>© hollk | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+
+
+
+</footer>
+
+    </div>
+</body>
+</html>
